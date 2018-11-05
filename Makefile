@@ -29,6 +29,9 @@ PROJECT_DEFINES = \
 ifeq (true,$(DEBUGGING))
 DEBUG_FLAGS = -g3
 PROJECT_DEFINES += DEBUG
+BUILD_STRIP_JSKIT = true debug not stripped
+else
+BUILD_STRIP_JSKIT = strip dist/bin/`basename $(BUILD_JSKIT_PROGRAM)`
 endif
 
 # not all .c files in the source/libjs directory are targets so this list object list is hand made.
@@ -145,9 +148,7 @@ lib-dist: $(BUILD_JS_LIBRARY_ARCHIVE)
 bin-dist: $(BUILD_JSKIT_PROGRAM)
 	@mkdir -vp dist/bin
 	@cp -vu $(BUILD_JSKIT_PROGRAM) dist/bin
-ifneq (true,$(DEBUGGING))
-	@strip dist/bin/`basename $(BUILD_JSKIT_PROGRAM)`
-endif
+	$(BUILD_STRIP_JSKIT)
 
 dist: lib-dist bin-dist
 
