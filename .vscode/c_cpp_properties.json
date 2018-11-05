@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/include/nspr",
+                "${workspaceFolder}/build",
+                "${workspaceFolder}/build/jskit/scripts"
+            ],
+            "defines": [
+                "XP_UNIX",
+                "SVR4",
+                "_DEFAULT_SOURCE",
+                "POSIX_SOURCE",
+                "SYSV",
+                "HAVE_LOCALTIME_R",
+                "HAVE_VA_COPY",
+                "VA_COPY=va_copy",
+                "PIC",
+                "JS_THREADSAFE"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}

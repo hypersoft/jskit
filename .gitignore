@@ -1,0 +1,5 @@
+build/
+dist/
+bin/jscpucfg
+bin/jskwgen
+bin/bin2inc
