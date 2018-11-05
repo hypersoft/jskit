@@ -1,4 +1,4 @@
-#!/usr/bin/smash --shell-script
+#!/usr/bin/jskit
 
 /* global system, parameter */
 
