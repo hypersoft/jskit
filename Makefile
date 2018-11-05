@@ -53,7 +53,7 @@ BUILD_JS_KEYWORDS_H = build/javascript/jsautokw.h
 BUILD_JS_KEYWORDS = build/javascript/jskwgen.o
 BUILD_JS_CPUCFG = build/javascript/jscpucfg.o
 BUILD_JS_AUTO_TOOLS = $(BUILD_JS_KEYWORDS) $(BUILD_JS_CPUCFG)
-BUILD_JS_KIT = build/spider/spider.o
+BUILD_SPIDER = build/spider/spider.o
 
 # all js kit scripts are automatic targets
 BUILD_SPIDER_SCRIPTS != echo source/spider/scripts/*.js | sed -E -e 's/\.js/.c/g' -e s/source/build/g
@@ -72,7 +72,7 @@ BUILD_SPIDER_PROGRAM = build/spider/spider
 # object files
 ALL_BUILT_OBJECTS = $(BUILD_BIN2INC_PROGRAM) \
   $(BUILD_LIBRARY) $(BUILD_JS_CPUCFG_H) $(BUILD_JS_KEYWORDS_H) \
-	$(BUILD_JS_AUTO_TOOLS) $(BUILD_SPIDER_SCRIPTS) $(BUILD_JS_KIT)
+	$(BUILD_JS_AUTO_TOOLS) $(BUILD_SPIDER_SCRIPTS) $(BUILD_SPIDER)
 
 # program files
 ALL_BUILT_PROGRAMS = \
@@ -101,7 +101,7 @@ build/javascript/jsscan.o: $(BUILD_JS_KEYWORDS_H)
 
 # declare that all build objects depend on autocpucfg, because source/javascript/jsapi.h requires it.
 # doing this other ways could create problems, such as during make -j ...
-$(BUILD_JS_KIT) $(BUILD_LIBRARY): $(BUILD_JS_CPUCFG_H)
+$(BUILD_SPIDER) $(BUILD_LIBRARY): $(BUILD_JS_CPUCFG_H)
 
 build/javascript/%.o: source/javascript/%.c
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -Ibuild/javascript $(NSPR_CFLAGS) $<
@@ -127,12 +127,12 @@ $(BUILD_JS_KEYWORDS_H): bin/jskwgen
 $(BUILD_JS_LIBRARY_ARCHIVE): $(BUILD_LIBRARY)
 	ar rv $@ $(BUILD_LIBRARY)
 
-$(BUILD_JS_KIT): $(BUILD_SPIDER_SCRIPTS)
+$(BUILD_SPIDER): $(BUILD_SPIDER_SCRIPTS)
 
 build/spider/scripts/%.c: source/spider/scripts/%.js bin/bin2inc
 	bin2inc "`basename $<`" < $< > $@
 
-$(BUILD_SPIDER_PROGRAM): $(BUILD_JS_KIT) $(BUILD_JS_LIBRARY_ARCHIVE)
+$(BUILD_SPIDER_PROGRAM): $(BUILD_SPIDER) $(BUILD_JS_LIBRARY_ARCHIVE)
 	gcc -o $@ $< $(DEBUG_FLAGS) $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS) -lreadline
 
 clean:
