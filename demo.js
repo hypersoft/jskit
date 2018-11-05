@@ -1,6 +1,6 @@
 #!/usr/bin/jskit
 
-/* global system, parameter */
+/* global function Shell(cmd), parameter */
 
 // Shell.source("/some/javascript/file.js")
 
