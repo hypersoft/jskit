@@ -23,7 +23,7 @@ if (Shell.get('notavar') !== null) {
 	echo("testing environment for empty value failed");
 }
 
-Shell.write('cat', Shell.read('ls').output);
+Shell.writePipe('cat', Shell.readPipe('ls').output);
 
 echo("you typed: ", Shell.readLine("type something > "));
 
