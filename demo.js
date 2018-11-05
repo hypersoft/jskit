@@ -25,7 +25,7 @@ if (Shell.get('notavar') !== null) {
 
 Shell.writePipe('cat', Shell.readPipe('ls').output);
 
-echo("you typed: ", Shell.readLine("type something > "));
+//echo("you typed: ", Shell.readLine("type something > "));
 
 echo("All properties of Function: Shell:", Object.keys(Shell).join(", "));
 echo("exiting...");
