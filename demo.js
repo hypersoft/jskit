@@ -5,7 +5,7 @@
 // Shell.include("/some/javascript/file.js")
 
 Shell.writeFile('js.out', parameter.join(", ") + '\n');
-// Shell.pushFile(FILE, CONTENTS) // for append mode
+// Shell.joinFile(FILE, CONTENTS) // for append mode
 
 var fileContent = Shell.readFile('js.out');
 echo("file content:", fileContent);

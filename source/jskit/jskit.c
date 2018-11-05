@@ -1057,7 +1057,7 @@ static JSBool ShellSetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 
 }
 
-static JSBool ShellPushFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+static JSBool ShellPrintFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 	char * filename = JS_ValueToNativeString(cx, argv[0]);
 	if (!filename) {
@@ -1357,7 +1357,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "getFileProperties", ShellFileStat, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readFile", ShellGetFileContent, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "writeFile", ShellSetFileContent, 2, JSPROP_ENUMERATE);
-    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "pushFile", ShellPushFile, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "joinFile", ShellPrintFile, 2, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "exit",              ShellExit, 0, JSPROP_ENUMERATE);
 
     return JS_TRUE;
