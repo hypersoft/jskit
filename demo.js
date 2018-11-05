@@ -7,8 +7,9 @@
 setFileContent('js.out', parameter.join(", ") + '\n');
 // setFileContent.append(FILE, CONTENTS)
 
-var output = getFileContent('js.out');
-echo("file contents:", output);
+var fileContent = getFileContent('js.out');
+echo("file content:", fileContent);
+
 system('rm js.out');
 
 set('SCRIPT', parameter[0]);
@@ -24,8 +25,6 @@ if (get('notavar') !== null) {
 
 system.write('cat', system.read('ls').output);
 
-// this doesn't exist yet
 echo("you typed: ", readLine("type something > "));
 
-// this doesn't exist yet
 exit(0);

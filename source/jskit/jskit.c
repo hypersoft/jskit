@@ -135,7 +135,6 @@ typedef enum JSShellErrNum {
 static const JSErrorFormatString *
 my_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber);
 
-
 #ifdef EDITLINE
 JS_BEGIN_EXTERN_C
 extern char     *readline(const char *prompt);
