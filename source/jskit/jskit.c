@@ -336,7 +336,6 @@ extern JSClass global_class;
 static int
 ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 {
-    int i = 0, j, length;
     JSObject *argsObj;
     char *filename = NULL; //(argc)?argv[0]:NULL;
     //JSBool isInteractive = JS_TRUE;
@@ -367,6 +366,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
         return 1;
     }
 
+    int i = 0;
     for (i = 0; i < argc; i++) {
         JSString *str = JS_NewStringCopyZ(cx, argv[i]);
         if (!str)
@@ -383,43 +383,6 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
        Process(cx, obj, NULL, forceTTY);
     }
     return gExitCode;
-}
-
-static JSBool
-Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-    uintN i;
-    JSString *str;
-    const char *filename;
-    JSScript *script;
-    JSBool ok;
-    jsval result;
-    uint32 oldopts;
-
-    for (i = 0; i < argc; i++) {
-        str = JS_ValueToString(cx, argv[i]);
-        if (!str)
-            return JS_FALSE;
-        argv[i] = STRING_TO_JSVAL(str);
-        filename = JS_GetStringBytes(str);
-        errno = 0;
-        oldopts = JS_GetOptions(cx);
-        JS_SetOptions(cx, oldopts | JSOPTION_COMPILE_N_GO);
-        script = JS_CompileFile(cx, obj, filename);
-        if (!script) {
-            ok = JS_FALSE;
-        } else {
-            ok = !compileOnly
-                 ? JS_ExecuteScript(cx, obj, script, &result)
-                 : JS_TRUE;
-            JS_DestroyScript(cx, script);
-        }
-        JS_SetOptions(cx, oldopts);
-        if (!ok)
-            return JS_FALSE;
-    }
-
-    return JS_TRUE;
 }
 
 JSErrorFormatString jsShell_ErrorFormatString[JSErr_Limit] = {
@@ -846,7 +809,7 @@ static JSBool ShellInclude(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
 
 static JSBool ShellReadline(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
-	JSBool status;
+
     char * string[2];
     jsval out;
     string[0] = JS_ValueToNativeString(cx, argv[0]);
@@ -1036,7 +999,7 @@ static JSBool ShellGetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 	}
 
 	char *buf = NULL;
-	size_t len = 0, i = 0;
+	size_t len = 0;
 
 #if (SYSTEM_CPU_BITS == 64)
 
@@ -1063,7 +1026,7 @@ static JSBool ShellGetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 		JS_ReturnExceptionEscape("failed to allocate input buffer for file handle of: %s", cmd, cmd);
 	}
 
-	int bytes = PR_Read(fp, buf, len - 1);
+	PR_Read(fp, buf, len - 1);
 	buf[len - 1] = 0; 
 	JSString * contents = JS_NewStringCopyN(cx, (const char *) buf, len - 1);
 	free(buf);
@@ -1181,7 +1144,6 @@ bool buffer_ends_with_newline(register char * buffer, int length) {
 static JSBool ShellEchoError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 	uintN i, argFinal = argc - 1;
-	JSString *str;
 	char *bytes;
 	bool have_newline = false;
 
@@ -1203,7 +1165,6 @@ static JSBool ShellEcho(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 {
 
 	uintN i, argFinal = argc - 1;
-	JSString *str;
 	char *bytes;
 	bool have_newline = false;
 	for (i = 0; i < argc; i++) {
@@ -1275,7 +1236,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
 int main(int argc, char **argv, char **envp) {
 
     int stackDummy;
-    JSObject *glob, *envobj;
+    JSObject *glob;
     int result;
 
     setlocale(LC_ALL, "");
