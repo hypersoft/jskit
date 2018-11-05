@@ -8,7 +8,7 @@ DEBUGGING != if test -e build/debug; then echo true; else echo false; fi
 # paths or you will get leftover directories in make clean
 ALL_BUILD_DIRECTORIES = bin build/{libjs,jskit/scripts,jskit}
 
-ifeq (all,$(TARGET))
+ifneq (clean,$(TARGET))
 # everything we build depends on these directories
 .not_existing_directory_error != mkdir -p $(ALL_BUILD_DIRECTORIES)
 endif
