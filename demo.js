@@ -1,4 +1,4 @@
-#!/usr/bin/jskit --shell-script
+#!/bin/spider --shell-script
 
 /* global function Shell(cmd), parameter */
 

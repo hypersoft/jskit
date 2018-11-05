@@ -372,7 +372,7 @@ Process(JSContext *cx, JSObject *obj, char *filename, JSBool forceTTY)
          */
         startline = lineno;
         do {
-            if (!GetLine(cx, bufp, file, startline == lineno ? "jskit: " : "")) {
+            if (!GetLine(cx, bufp, file, startline == lineno ? "spider: " : "")) {
                 hitEOF = JS_TRUE;
                 break;
             }
@@ -1404,7 +1404,7 @@ int main(int argc, char **argv, char **envp) {
 #endif
 
     jsval rval = 0;
-    JS_EvaluateScript(cx, JS_GetGlobalObject(cx), OBJECT_KEYS_PATCH_JS, OBJECT_KEYS_PATCH_JS_LENGTH, "jskit://object-keys-patch.js", 1, &rval);
+    JS_EvaluateScript(cx, JS_GetGlobalObject(cx), OBJECT_KEYS_PATCH_JS, OBJECT_KEYS_PATCH_JS_LENGTH, "spider://object-keys-patch.js", 1, &rval);
 
     M180_ShellInit(cx, glob);
 
@@ -1418,4 +1418,5 @@ int main(int argc, char **argv, char **envp) {
     JS_DestroyRuntime(rt);
     JS_ShutDown();
     return result;
+
 }

@@ -6,7 +6,7 @@
                 "${workspaceFolder}/**",
                 "/usr/include/nspr",
                 "${workspaceFolder}/build",
-                "${workspaceFolder}/build/jskit/scripts"
+                "${workspaceFolder}/build/spider/scripts"
             ],
             "defines": [
                 "XP_UNIX",

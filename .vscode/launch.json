@@ -8,7 +8,7 @@
 			"name": "(gdb) Launch",
 			"type": "cppdbg",
 			"request": "launch",
-			"program": "${workspaceFolder}/dist/bin/jskit",
+			"program": "${workspaceFolder}/dist/bin/spider",
 			"args": ["-s", "demo.js", "hello", "worldians"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",

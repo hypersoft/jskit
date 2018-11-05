@@ -6,7 +6,7 @@ DEBUGGING != if test -e build/debug; then echo true; else echo false; fi
 
 # if you add directories here, make sure the deeper tree paths are listed before the shallow tree
 # paths or you will get leftover directories in make clean
-ALL_BUILD_DIRECTORIES = bin build/{libjs,jskit/scripts,jskit}
+ALL_BUILD_DIRECTORIES = bin build/{javascript,spider/scripts,spider}
 
 ifneq (clean,$(TARGET))
 # everything we build depends on these directories
@@ -29,34 +29,34 @@ PROJECT_DEFINES = \
 ifeq (true,$(DEBUGGING))
 DEBUG_FLAGS = -g3
 PROJECT_DEFINES += DEBUG
-BUILD_STRIP_JSKIT = : debug-build not stripped
+BUILD_STRIP_SPIDER = : debug-build not stripped
 else
-BUILD_STRIP_JSKIT = strip dist/bin/$(shell basename $(BUILD_JSKIT_PROGRAM))
+BUILD_STRIP_SPIDER = strip dist/bin/$(shell basename $(BUILD_SPIDER_PROGRAM))
 endif
 
-# not all .c files in the source/libjs directory are targets so this list object list is hand made.
+# not all .c files in the source/javascript directory are targets so this list object list is hand made.
 BUILD_LIBRARY = \
                  \
-	build/libjs/jsapi.o build/libjs/jsarena.o build/libjs/jsarray.o build/libjs/jsatom.o \
-	build/libjs/jsbool.o build/libjs/jscntxt.o build/libjs/jsdate.o build/libjs/jsdbgapi.o \
-	build/libjs/jsdhash.o build/libjs/jsdtoa.o build/libjs/jsemit.o build/libjs/jsexn.o \
-	build/libjs/jsfile.o build/libjs/jsfun.o build/libjs/jsgc.o build/libjs/jshash.o \
-	build/libjs/jsinterp.o build/libjs/jsinvoke.o build/libjs/jsiter.o build/libjs/jslock.o \
-	build/libjs/jslog2.o build/libjs/jslong.o build/libjs/jsmath.o build/libjs/jsnum.o \
-	build/libjs/jsobj.o build/libjs/jsopcode.o build/libjs/jsparse.o build/libjs/jsprf.o \
-	build/libjs/jsregexp.o build/libjs/jsscan.o build/libjs/jsscope.o build/libjs/jsscript.o \
-	build/libjs/jsstr.o build/libjs/jsutil.o build/libjs/jsxdrapi.o build/libjs/jsxml.o \
-	build/libjs/prmjtime.o
+	build/javascript/jsapi.o build/javascript/jsarena.o build/javascript/jsarray.o build/javascript/jsatom.o \
+	build/javascript/jsbool.o build/javascript/jscntxt.o build/javascript/jsdate.o build/javascript/jsdbgapi.o \
+	build/javascript/jsdhash.o build/javascript/jsdtoa.o build/javascript/jsemit.o build/javascript/jsexn.o \
+	build/javascript/jsfile.o build/javascript/jsfun.o build/javascript/jsgc.o build/javascript/jshash.o \
+	build/javascript/jsinterp.o build/javascript/jsinvoke.o build/javascript/jsiter.o build/javascript/jslock.o \
+	build/javascript/jslog2.o build/javascript/jslong.o build/javascript/jsmath.o build/javascript/jsnum.o \
+	build/javascript/jsobj.o build/javascript/jsopcode.o build/javascript/jsparse.o build/javascript/jsprf.o \
+	build/javascript/jsregexp.o build/javascript/jsscan.o build/javascript/jsscope.o build/javascript/jsscript.o \
+	build/javascript/jsstr.o build/javascript/jsutil.o build/javascript/jsxdrapi.o build/javascript/jsxml.o \
+	build/javascript/prmjtime.o
 
-BUILD_JS_CPUCFG_H = build/libjs/jsautocfg.h
-BUILD_JS_KEYWORDS_H = build/libjs/jsautokw.h
-BUILD_JS_KEYWORDS = build/libjs/jskwgen.o
-BUILD_JS_CPUCFG = build/libjs/jscpucfg.o
+BUILD_JS_CPUCFG_H = build/javascript/jsautocfg.h
+BUILD_JS_KEYWORDS_H = build/javascript/jsautokw.h
+BUILD_JS_KEYWORDS = build/javascript/jskwgen.o
+BUILD_JS_CPUCFG = build/javascript/jscpucfg.o
 BUILD_JS_AUTO_TOOLS = $(BUILD_JS_KEYWORDS) $(BUILD_JS_CPUCFG)
-BUILD_JS_KIT = build/jskit/jskit.o
+BUILD_JS_KIT = build/spider/spider.o
 
 # all js kit scripts are automatic targets
-BUILD_JSKIT_SCRIPTS != echo source/jskit/scripts/*.js | sed -E -e 's/\.js/.c/g' -e s/source/build/g
+BUILD_SPIDER_SCRIPTS != echo source/spider/scripts/*.js | sed -E -e 's/\.js/.c/g' -e s/source/build/g
 
 # automatic target generators
 BUILD_JS_KEYWORDS_PROGRAM = bin/jskwgen
@@ -66,17 +66,17 @@ BUILD_BIN2INC_PROGRAM = bin/bin2inc
 BUILD_AUTO_PROGRAMS = $(BUILD_BIN2INC_PROGRAM) $(BUILD_JS_CPUCFG_PROGRAM) $(BUILD_JS_KEYWORDS_PROGRAM)
 
 # production files
-BUILD_JS_LIBRARY_ARCHIVE = build/libjs/libjskit.a
-BUILD_JSKIT_PROGRAM = build/jskit/jskit
+BUILD_JS_LIBRARY_ARCHIVE = build/javascript/libspider.a
+BUILD_SPIDER_PROGRAM = build/spider/spider
 
 # object files
 ALL_BUILT_OBJECTS = $(BUILD_BIN2INC_PROGRAM) \
   $(BUILD_LIBRARY) $(BUILD_JS_CPUCFG_H) $(BUILD_JS_KEYWORDS_H) \
-	$(BUILD_JS_AUTO_TOOLS) $(BUILD_JSKIT_SCRIPTS) $(BUILD_JS_KIT)
+	$(BUILD_JS_AUTO_TOOLS) $(BUILD_SPIDER_SCRIPTS) $(BUILD_JS_KIT)
 
 # program files
 ALL_BUILT_PROGRAMS = \
-	$(BUILD_AUTO_PROGRAMS) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_JSKIT_PROGRAM) 
+	$(BUILD_AUTO_PROGRAMS) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_SPIDER_PROGRAM) 
 
 NSPR_CFLAGS = -I/usr/include/nspr
 NSPR_LIBS = -lm -L/usr/lib -lplds4 -lplc4 -lnspr4
@@ -97,25 +97,25 @@ all: dist
 $(ALL_BUILT_OBJECTS): Makefile
 
 # the lexical scanner requires automatic configuration
-build/libjs/jsscan.o: $(BUILD_JS_KEYWORDS_H)
+build/javascript/jsscan.o: $(BUILD_JS_KEYWORDS_H)
 
-# declare that all build objects depend on autocpucfg, because source/libjs/jsapi.h requires it.
+# declare that all build objects depend on autocpucfg, because source/javascript/jsapi.h requires it.
 # doing this other ways could create problems, such as during make -j ...
 $(BUILD_JS_KIT) $(BUILD_LIBRARY): $(BUILD_JS_CPUCFG_H)
 
-build/libjs/%.o: source/libjs/%.c
-	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -Ibuild/libjs $(NSPR_CFLAGS) $<
+build/javascript/%.o: source/javascript/%.c
+	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -Ibuild/javascript $(NSPR_CFLAGS) $<
 
-build/jskit/%.o: source/jskit/%.c
-	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -DEDITLINE -Isource/libjs -Ibuild/libjs -Ibuild/jskit/scripts $(NSPR_CFLAGS) $<
+build/spider/%.o: source/spider/%.c
+	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -DEDITLINE -Isource/javascript -Ibuild/javascript -Ibuild/spider/scripts $(NSPR_CFLAGS) $<
 
 $(BUILD_BIN2INC_PROGRAM): source/bin2inc/bin2inc.c
 	gcc $< -o $@
 
-bin/jscpucfg: build/libjs/jscpucfg.o
+bin/jscpucfg: build/javascript/jscpucfg.o
 	gcc -o $@ $<
 
-bin/jskwgen: build/libjs/jskwgen.o
+bin/jskwgen: build/javascript/jskwgen.o
 	gcc -o $@ -lm $<
 
 $(BUILD_JS_CPUCFG_H): bin/jscpucfg
@@ -127,28 +127,28 @@ $(BUILD_JS_KEYWORDS_H): bin/jskwgen
 $(BUILD_JS_LIBRARY_ARCHIVE): $(BUILD_LIBRARY)
 	ar rv $@ $(BUILD_LIBRARY)
 
-$(BUILD_JS_KIT): $(BUILD_JSKIT_SCRIPTS)
+$(BUILD_JS_KIT): $(BUILD_SPIDER_SCRIPTS)
 
-build/jskit/scripts/%.c: source/jskit/scripts/%.js bin/bin2inc
+build/spider/scripts/%.c: source/spider/scripts/%.js bin/bin2inc
 	bin2inc "`basename $<`" < $< > $@
 
-$(BUILD_JSKIT_PROGRAM): $(BUILD_JS_KIT) $(BUILD_JS_LIBRARY_ARCHIVE)
+$(BUILD_SPIDER_PROGRAM): $(BUILD_JS_KIT) $(BUILD_JS_LIBRARY_ARCHIVE)
 	gcc -o $@ $< $(DEBUG_FLAGS) $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS) -lreadline
 
 clean:
 	-@rm -vf $(ALL_BUILT_OBJECTS) $(ALL_BUILT_PROGRAMS)
-	-@rm -vf build/jskit/scripts/*.c # just in case any leftovers from a file rename; as we don't manage those files from within this file
+	-@rm -vf build/spider/scripts/*.c # just in case any leftovers from a file rename; as we don't manage those files from within this file
 	-@rm -vfd $(ALL_BUILD_DIRECTORIES)
 
 lib-dist: $(BUILD_JS_LIBRARY_ARCHIVE)
 	@mkdir -vp dist/lib dist/include
 	@cp -vu $(BUILD_JS_LIBRARY_ARCHIVE) dist/lib
-	@cp -vu source/libjs/*.h build/libjs/*.h dist/include
+	@cp -vu source/javascript/*.h build/javascript/*.h dist/include
 
-bin-dist: $(BUILD_JSKIT_PROGRAM)
+bin-dist: $(BUILD_SPIDER_PROGRAM)
 	@mkdir -vp dist/bin
-	@cp -vu $(BUILD_JSKIT_PROGRAM) dist/bin
-	$(BUILD_STRIP_JSKIT)
+	@cp -vu $(BUILD_SPIDER_PROGRAM) dist/bin
+	$(BUILD_STRIP_SPIDER)
 
 dist: lib-dist bin-dist
 
