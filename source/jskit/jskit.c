@@ -759,7 +759,7 @@ int StringBufferExtent(register StringBuffer *buffer, size_t size) {
 }
 
 void JS_FreeNativeStringArray(JSContext * cx, char * b[], int c) {
-    int i;
+    int i = 0;
     while (i < c) JS_free(cx, b[i++]);
 }
 
