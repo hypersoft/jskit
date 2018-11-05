@@ -163,6 +163,9 @@ else
 
 all:
 
+slow:
+	@TARGET=all HYPER_MAKE=1 PATH=$(shell realpath .)/bin:$(PATH) make --no-print-directory all
+
 %:
 	@TARGET=$@ HYPER_MAKE=1 PATH=$(shell realpath .)/bin:$(PATH) make --no-print-directory -j $@
 
