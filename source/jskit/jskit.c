@@ -1277,6 +1277,40 @@ static JSBool ShellEcho(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 	JS_ReturnValue(JSVAL_VOID);
 }
 
+static JSBool ShellPrint(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+	uintN i, argFinal = argc - 1;
+	char *bytes;
+	for (i = 0; i < argc; i++) {
+		bytes = JS_ValueToNativeString(cx, argv[i]);
+		if (! bytes) continue;
+		printf("%s%s", i ? " " : "", bytes);
+		JS_FreeNativeString(cx, bytes);
+	}
+	
+	fflush(stdout);
+
+	JS_ReturnValue(JSVAL_VOID);
+}
+
+static JSBool ShellPrintError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+	uintN i, argFinal = argc - 1;
+	char *bytes;
+	for (i = 0; i < argc; i++) {
+		bytes = JS_ValueToNativeString(cx, argv[i]);
+		if (! bytes) continue;
+		fprintf(stderr, "%s%s", i ? " " : "", bytes);
+		JS_FreeNativeString(cx, bytes);
+	}
+	
+	fflush(stdout);
+
+	JS_ReturnValue(JSVAL_VOID);
+}
+
 static JSBool ShellExit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 
@@ -1299,6 +1333,8 @@ static JSFunctionSpec shell_functions[] = {
     JS_FS("Shell",      ShellSystem,           1, JSPROP_ENUMERATE,0),
     JS_FS("echo",         ShellEcho,           0, JSPROP_ENUMERATE,0),
     JS_FS("error",         ShellEchoError,     0, JSPROP_ENUMERATE,0),
+    JS_FS("print",         ShellPrint,           0, JSPROP_ENUMERATE,0),
+    JS_FS("printError",         ShellPrintError,     0, JSPROP_ENUMERATE,0),
     JS_FS("exit",         ShellExit,           0, JSPROP_ENUMERATE,0),
     JS_FS_END
 };
@@ -1311,6 +1347,8 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "include", ShellInclude, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "error", ShellEchoError, 0, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "echo", ShellEcho, 0, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "printError", ShellPrintError, 0, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "print", ShellPrint, 0, JSPROP_ENUMERATE);
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readPipe", ShellSystemRead, 1, JSPROP_ENUMERATE);
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "writePipe", ShellSystemWrite, 2, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "get", ShellGet, 1, JSPROP_ENUMERATE);
