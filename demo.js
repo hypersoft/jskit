@@ -2,7 +2,7 @@
 
 /* global system, parameter */
 
-// Shell.include("/some/javascript/file.js")
+// Shell.source("/some/javascript/file.js")
 
 Shell.writeFile('js.out', parameter.join(", ") + '\n');
 // Shell.joinFile(FILE, CONTENTS) // for append mode

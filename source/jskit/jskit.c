@@ -1329,8 +1329,8 @@ static JSFunctionSpec shell_functions[] = {
     JS_FS("Shell",      ShellSystem,           1, JSPROP_ENUMERATE,0),
     JS_FS("echo",         ShellEcho,           0, JSPROP_ENUMERATE,0),
     JS_FS("error",         ShellEchoError,     0, JSPROP_ENUMERATE,0),
-    JS_FS("print",         ShellPrint,           0, JSPROP_ENUMERATE,0),
-    JS_FS("printError",         ShellPrintError,     0, JSPROP_ENUMERATE,0),
+    JS_FS("print",         ShellPrint,         0, JSPROP_ENUMERATE,0),
+    JS_FS("printError",   ShellPrintError,     0, JSPROP_ENUMERATE,0),
     JS_FS("exit",         ShellExit,           0, JSPROP_ENUMERATE,0),
     JS_FS_END
 };
@@ -1340,7 +1340,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
 	JS_DefineFunctions(cx, global, shell_functions);
 	jsval fun;
 	JS_GetProperty(cx, global, "Shell", &fun);
-    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "include", ShellInclude, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "source", ShellInclude, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "error", ShellEchoError, 0, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "echo", ShellEcho, 0, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "printError", ShellPrintError, 0, JSPROP_ENUMERATE);
