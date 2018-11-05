@@ -331,18 +331,6 @@ Process(JSContext *cx, JSObject *obj, char *filename, JSBool forceTTY)
     return;
 }
 
-static struct {
-    const char  *name;
-    uint32      flag;
-} js_options[] = {
-    {"strict",          JSOPTION_STRICT},
-    {"werror",          JSOPTION_WERROR},
-    {"atline",          JSOPTION_ATLINE},
-    {"relimit",         JSOPTION_RELIMIT},
-    {"anonfunfix",      JSOPTION_ANONFUNFIX},
-    {NULL,              0}
-};
-
 extern JSClass global_class;
 
 static int
@@ -350,10 +338,23 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 {
     int i = 0, j, length;
     JSObject *argsObj;
-    char *filename = (argc)?argv[0]:NULL;
-    JSBool isInteractive = JS_TRUE;
+    char *filename = NULL; //(argc)?argv[0]:NULL;
+    //JSBool isInteractive = JS_TRUE;
+    JSBool interactive = JS_FALSE;
     JSBool forceTTY = JS_FALSE;
 
+    while (argc) {
+        if (strcmp(argv[0], "-s" ) == 0 ||  strcmp(argv[0], "--shell-script") == 0) {
+            filename = argv[1]; argc-=2; argv+=2;
+            break;
+        }
+        if (strcmp(argv[0], "-i") == 0) {
+            argc--; argv++;
+            interactive = JS_TRUE;
+            continue;
+        }
+        break;
+    }
     /*
      * Create arguments early and define it to root it, so it's safe from any
      * GC calls nested below, and so it is available to -f <file> arguments.
@@ -366,19 +367,21 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
         return 1;
     }
 
-    length = argc;
-    for (j = 0; j < length; j++) {
-        JSString *str = JS_NewStringCopyZ(cx, argv[i++]);
+    for (i = 0; i < argc; i++) {
+        JSString *str = JS_NewStringCopyZ(cx, argv[i]);
         if (!str)
             return 1;
-        if (!JS_DefineElement(cx, argsObj, j, STRING_TO_JSVAL(str),
+        if (!JS_DefineElement(cx, argsObj, i, STRING_TO_JSVAL(str),
                               NULL, NULL, JSPROP_ENUMERATE)) {
             return 1;
         }
     }
 
-    if (filename || isInteractive) Process(cx, obj, filename, forceTTY);
-
+    if (filename) {
+        Process(cx, obj, filename, forceTTY);
+    } else if (interactive == JS_TRUE) {
+       Process(cx, obj, NULL, forceTTY);
+    }
     return gExitCode;
 }
 
@@ -1221,7 +1224,8 @@ static JSBool ShellEcho(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 static JSBool ShellExit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 
-    int exitcode = JSVAL_TO_INT((argc == 1)?argv[0]:1);
+    int exitcode = JSVAL_TO_INT((argc > 0)?argv[0]:0);
+
 #ifdef JS_THREADSAFE
     JS_EndRequest(cx);
 #endif
