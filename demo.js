@@ -1,4 +1,4 @@
-#!/usr/bin/jskit
+#!/usr/bin/jskit --shell-script
 
 /* global function Shell(cmd), parameter */
 
