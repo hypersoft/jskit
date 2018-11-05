@@ -31,7 +31,7 @@ DEBUG_FLAGS = -g3
 PROJECT_DEFINES += DEBUG
 BUILD_STRIP_JSKIT = : debug-build not stripped
 else
-BUILD_STRIP_JSKIT = strip dist/bin/`basename $(BUILD_JSKIT_PROGRAM)`
+BUILD_STRIP_JSKIT = strip dist/bin/$(shell basename $(BUILD_JSKIT_PROGRAM))
 endif
 
 # not all .c files in the source/libjs directory are targets so this list object list is hand made.
