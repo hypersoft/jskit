@@ -144,7 +144,7 @@ lib-dist: $(BUILD_JS_LIBRARY_ARCHIVE)
 bin-dist: $(BUILD_JSKIT_PROGRAM)
 	@mkdir -vp dist/bin
 	@cp -vu $(BUILD_JSKIT_PROGRAM) dist/bin
-	@strip dist/bin/`basename $(BUILD_JSKIT_PROGRAM)`
+	@#strip dist/bin/`basename $(BUILD_JSKIT_PROGRAM)`
 
 dist: lib-dist bin-dist
 

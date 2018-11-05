@@ -4,27 +4,29 @@
 
 // include("/some/javascript/file.js")
 
-setFileContent('js.out', parameter.join(", ") + '\n');
-// setFileContent.append(FILE, CONTENTS)
+Shell.setFile('js.out', parameter.join(", ") + '\n');
+// Shell.joinFile(FILE, CONTENTS)
 
-var fileContent = getFileContent('js.out');
+var fileContent = Shell.getFile('js.out');
 echo("file content:", fileContent);
 
-system('rm js.out');
+Shell('rm js.out');
 
-set('SCRIPT', parameter[0]);
+Shell.set('SCRIPT', parameter[0]);
 // set(VAR, VALUE, TRUE) // don't overwrite if set
 
-echo("environment variable:", get('SCRIPT'));
-clear('SCRIPT');
-echo(keys());
+echo("environment variable:", Shell.get('SCRIPT'));
+Shell.clear('SCRIPT');
+echo(Shell.keys());
 
-if (get('notavar') !== null) {
+if (Shell.get('notavar') !== null) {
 	echo("testing environment for empty value failed");
 }
 
-system.write('cat', system.read('ls').output);
+Shell.write('cat', Shell.read('ls').output);
 
-echo("you typed: ", readLine("type something > "));
+echo("you typed: ", Shell.readLine("type something > "));
 
 exit(0);
+
+echo("not reached");

@@ -378,7 +378,9 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 
     if (filename) {
         Process(cx, obj, filename, forceTTY);
-    } else if (interactive == JS_TRUE) {
+    } 
+    
+    else if (interactive == JS_TRUE) {
        Process(cx, obj, NULL, forceTTY);
     }
     return gExitCode;
@@ -1202,6 +1204,8 @@ static JSBool ShellExit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 static JSFunctionSpec shell_functions[] = {
     JS_FS("Shell",      ShellSystem,           1, JSPROP_ENUMERATE,0),
     JS_FS("echo",         ShellEcho,           0, JSPROP_ENUMERATE,0),
+    JS_FS("error",         ShellEchoError,     0, JSPROP_ENUMERATE,0),
+    JS_FS("exit",         ShellExit,           0, JSPROP_ENUMERATE,0),
     JS_FS_END
 };
 
@@ -1212,6 +1216,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
 	JS_GetProperty(cx, global, "Shell", &fun);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "include", ShellInclude, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "error", ShellEchoError, 0, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "echo", ShellEcho, 0, JSPROP_ENUMERATE);
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "read", ShellSystemRead, 1, JSPROP_ENUMERATE);
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "write", ShellSystemWrite, 2, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "get", ShellGet, 1, JSPROP_ENUMERATE);
@@ -1225,10 +1230,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "setFile", ShellSetFileContent, 2, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "joinFile",          ShellSetFileContentAppend, 2, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "exit",              ShellExit, 0, JSPROP_ENUMERATE);
-	jsval fun2;
-	JS_GetProperty(cx, global, "echo", &fun2);
-    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "echo", ShellEcho, 0, JSPROP_ENUMERATE);
-	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun2), "error", ShellEchoError, 1, JSPROP_ENUMERATE);
+
     return JS_TRUE;
 
 }
