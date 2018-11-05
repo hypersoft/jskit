@@ -340,7 +340,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
     JSObject *argsObj;
     char *filename = NULL; //(argc)?argv[0]:NULL;
     //JSBool isInteractive = JS_TRUE;
-    JSBool interactive = JS_FALSE;
+    JSBool interactive = JS_TRUE;
     JSBool forceTTY = JS_FALSE;
 
     while (argc) {
