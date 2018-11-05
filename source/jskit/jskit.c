@@ -1199,7 +1199,7 @@ static JSBool ShellExit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 
 }
 
-static JSFunctionSpec shell_functions2[] = {
+static JSFunctionSpec shell_functions[] = {
     JS_FS("Shell",      ShellSystem,           1, JSPROP_ENUMERATE,0),
     JS_FS("echo",         ShellEcho,           0, JSPROP_ENUMERATE,0),
     JS_FS_END
@@ -1207,7 +1207,7 @@ static JSFunctionSpec shell_functions2[] = {
 
 JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
 
-	JS_DefineFunctions(cx, global, shell_functions2);
+	JS_DefineFunctions(cx, global, shell_functions);
 	jsval fun;
 	JS_GetProperty(cx, global, "Shell", &fun);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "include", ShellInclude, 1, JSPROP_ENUMERATE);

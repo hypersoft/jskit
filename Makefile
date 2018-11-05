@@ -129,7 +129,7 @@ build/jskit/scripts/%.c: source/jskit/scripts/%.js bin/bin2inc
 	bin2inc "`basename $<`" < $< > $@
 
 $(BUILD_JSKIT_PROGRAM): $(BUILD_JS_KIT) $(BUILD_JS_LIBRARY_ARCHIVE)
-	gcc -o $@ $< $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS) -lreadline
+	gcc -o $@ $< $(DEBUG_FLAGS) $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS) -lreadline
 
 clean:
 	-@rm -vf $(ALL_BUILT_OBJECTS) $(ALL_BUILT_PROGRAMS)
