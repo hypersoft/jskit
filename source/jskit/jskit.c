@@ -1200,19 +1200,8 @@ static JSBool ShellExit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 }
 
 static JSFunctionSpec shell_functions2[] = {
-    JS_FS("include",        ShellInclude,  1,JSPROP_ENUMERATE,0),
-    JS_FS("echo",        ShellEcho,        0,0,0),
-    JS_FS("system",      ShellSystem,           1,0,0),
-    JS_FS("readLine",       ShellReadline,       1,0,0),
-    JS_FS("getFileContent",          ShellGetFileContent,          1,0,0),
-    JS_FS("setFileContent",           ShellSetFileContent,           2,0,0),
-    JS_FS("get",           ShellGet,           1,0,0),
-    JS_FS("clear",             ShellClear,             1,0,0),
-    JS_FS("set",          ShellSet,      2,0,0),
-    JS_FS("keys",          ShellKeys,      0,0,0),
-    JS_FS("fileExists",          ShellFileExists,      1,0,0),
-    JS_FS("fileStatus",          ShellFileStat,      1,0,0),
-    JS_FS("exit",          ShellExit,      1,0,0),
+    JS_FS("Shell",      ShellSystem,           1, JSPROP_ENUMERATE,0),
+    JS_FS("echo",         ShellEcho,           0, JSPROP_ENUMERATE,0),
     JS_FS_END
 };
 
@@ -1220,16 +1209,28 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
 
 	JS_DefineFunctions(cx, global, shell_functions2);
 	jsval fun;
-	JS_GetProperty(cx, global, "system", &fun);
+	JS_GetProperty(cx, global, "Shell", &fun);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "include", ShellInclude, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "error", ShellEchoError, 0, JSPROP_ENUMERATE);
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "read", ShellSystemRead, 1, JSPROP_ENUMERATE);
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "write", ShellSystemWrite, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "get", ShellGet, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "set", ShellSet, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "clear", ShellClear, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "keys", ShellKeys, 0, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readLine", ShellReadline, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "fileExists", ShellFileExists, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "getFileProperties", ShellFileStat, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "getFile", ShellGetFileContent, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "setFile", ShellSetFileContent, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "joinFile",          ShellSetFileContentAppend, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "exit",              ShellExit, 0, JSPROP_ENUMERATE);
 	jsval fun2;
 	JS_GetProperty(cx, global, "echo", &fun2);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "echo", ShellEcho, 0, JSPROP_ENUMERATE);
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun2), "error", ShellEchoError, 1, JSPROP_ENUMERATE);
-	jsval fun3;
-	JS_GetProperty(cx, global, "setFileContent", &fun3);
-	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun3), "append", ShellSetFileContentAppend, 2, JSPROP_ENUMERATE);
     return JS_TRUE;
+
 }
 
 int main(int argc, char **argv, char **envp) {
