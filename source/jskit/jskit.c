@@ -390,7 +390,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
     argsObj = JS_NewArrayObject(cx, 0, NULL);
     if (!argsObj)
         return 1;
-    if (!JS_DefineProperty(cx, obj, "params", OBJECT_TO_JSVAL(argsObj),
+    if (!JS_DefineProperty(cx, obj, "parameter", OBJECT_TO_JSVAL(argsObj),
                            NULL, NULL, 0)) {
         return 1;
     }
