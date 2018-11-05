@@ -103,7 +103,7 @@ build/libjs/%.o: source/libjs/%.c
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -Ibuild/libjs $(NSPR_CFLAGS) $<
 
 build/jskit/%.o: source/jskit/%.c
-	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -Isource/libjs -Ibuild/libjs -Ibuild/jskit/scripts $(NSPR_CFLAGS) $<
+	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -DEDITLINE -Isource/libjs -Ibuild/libjs -Ibuild/jskit/scripts $(NSPR_CFLAGS) $<
 
 $(BUILD_BIN2INC_PROGRAM): source/bin2inc/bin2inc.c
 	gcc $< -o $@
@@ -129,7 +129,7 @@ build/jskit/scripts/%.c: source/jskit/scripts/%.js bin/bin2inc
 	bin2inc "`basename $<`" < $< > $@
 
 $(BUILD_JSKIT_PROGRAM): $(BUILD_JS_KIT) $(BUILD_JS_LIBRARY_ARCHIVE)
-	gcc -o $@ $< $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS)
+	gcc -o $@ $< $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS) -lreadline
 
 clean:
 	-@rm -vf $(ALL_BUILT_OBJECTS) $(ALL_BUILT_PROGRAMS)

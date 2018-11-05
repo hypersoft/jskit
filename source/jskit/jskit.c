@@ -43,6 +43,9 @@
 
 #include "object-keys-patch.c"
 
+JSRuntime *rt;
+JSContext *cx;
+
 void JS_FreeNativeStrings(JSContext * cx, ...) {
     va_list args;
     va_start(args, cx);
@@ -328,14 +331,6 @@ Process(JSContext *cx, JSObject *obj, char *filename, JSBool forceTTY)
     return;
 }
 
-static int
-usage(void)
-{
-    fprintf(gErrFile, "%s\n", JS_GetImplementationVersion());
-    fprintf(gErrFile, "usage: js [-zKPswWxCi] [-b branchlimit] [-c stackchunksize] [-o option] [-v version] [-f scriptfile] [-e script] [-S maxstacksize] [scriptfile] [scriptarg...]\n");
-    return 2;
-}
-
 static struct {
     const char  *name;
     uint32      flag;
@@ -353,35 +348,11 @@ extern JSClass global_class;
 static int
 ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 {
-    int i, j, length;
+    int i = 0, j, length;
     JSObject *argsObj;
-    char *filename = NULL;
+    char *filename = (argc)?argv[0]:NULL;
     JSBool isInteractive = JS_TRUE;
     JSBool forceTTY = JS_FALSE;
-
-    /*
-     * Scan past all optional arguments so we can create the arguments object
-     * before processing any -f options, which must interleave properly with
-     * -v and -w options.  This requires two passes, and without getopt, we'll
-     * have to keep the option logic here and in the second for loop in sync.
-     */
-    for (i = 0; i < argc; i++) {
-        if (argv[i][0] != '-' || argv[i][1] == '\0') {
-            ++i;
-            break;
-        }
-        switch (argv[i][1]) {
-          case 'b':
-          case 'c':
-          case 'f':
-          case 'e':
-          case 'v':
-          case 'S':
-            ++i;
-            break;
-          default:;
-        }
-    }
 
     /*
      * Create arguments early and define it to root it, so it's safe from any
@@ -395,7 +366,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
         return 1;
     }
 
-    length = argc - i;
+    length = argc;
     for (j = 0; j < length; j++) {
         JSString *str = JS_NewStringCopyZ(cx, argv[i++]);
         if (!str)
@@ -406,133 +377,8 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
         }
     }
 
-    for (i = 0; i < argc; i++) {
-        if (argv[i][0] != '-' || argv[i][1] == '\0') {
-            filename = argv[i++];
-            isInteractive = JS_FALSE;
-            break;
-        }
+    if (filename || isInteractive) Process(cx, obj, filename, forceTTY);
 
-        switch (argv[i][1]) {
-        case 'v':
-            if (++i == argc)
-                return usage();
-
-            JS_SetVersion(cx, (JSVersion) atoi(argv[i]));
-            break;
-
-        case 'w':
-            reportWarnings = JS_TRUE;
-            break;
-
-        case 'W':
-            reportWarnings = JS_FALSE;
-            break;
-
-        case 's':
-            JS_ToggleOptions(cx, JSOPTION_STRICT);
-            break;
-
-        case 'E':
-            JS_ToggleOptions(cx, JSOPTION_RELIMIT);
-            break;
-
-        case 'x':
-            JS_ToggleOptions(cx, JSOPTION_XML);
-            break;
-
-        case 'o':
-            if (++i == argc)
-                return usage();
-
-            for (j = 0; js_options[j].name; ++j) {
-                if (strcmp(js_options[j].name, argv[i]) == 0) {
-                    JS_ToggleOptions(cx, js_options[j].flag);
-                    break;
-                }
-            }
-            break;
-
-        case 'P':
-            if (JS_GET_CLASS(cx, JS_GetPrototype(cx, obj)) != &global_class) {
-                JSObject *gobj;
-
-                if (!JS_SealObject(cx, obj, JS_TRUE))
-                    return JS_FALSE;
-                gobj = JS_NewObject(cx, &global_class, NULL, NULL);
-                if (!gobj)
-                    return JS_FALSE;
-                if (!JS_SetPrototype(cx, gobj, obj))
-                    return JS_FALSE;
-                JS_SetParent(cx, gobj, NULL);
-                JS_SetGlobalObject(cx, gobj);
-                obj = gobj;
-            }
-            break;
-
-        case 'b':
-            gBranchLimit = atoi(argv[++i]);
-            gEnableBranchCallback = (gBranchLimit != 0);
-            break;
-
-        case 'c':
-            /* set stack chunk size */
-            gStackChunkSize = atoi(argv[++i]);
-            break;
-
-        case 'f':
-            if (++i == argc)
-                return usage();
-
-            Process(cx, obj, argv[i], JS_FALSE);
-
-            /*
-             * XXX: js -f foo.js should interpret foo.js and then
-             * drop into interactive mode, but that breaks the test
-             * harness. Just execute foo.js for now.
-             */
-            isInteractive = JS_FALSE;
-            break;
-
-        case 'e':
-        {
-            jsval rval;
-
-            if (++i == argc)
-                return usage();
-
-            /* Pass a filename of -e to imitate PERL */
-            JS_EvaluateScript(cx, obj, argv[i], strlen(argv[i]),
-                              "-e", 1, &rval);
-
-            isInteractive = JS_FALSE;
-            break;
-
-        }
-        case 'C':
-            compileOnly = JS_TRUE;
-            isInteractive = JS_FALSE;
-            break;
-
-        case 'i':
-            isInteractive = forceTTY = JS_TRUE;
-            break;
-
-        case 'S':
-            if (++i == argc)
-                return usage();
-
-            /* Set maximum stack size. */
-            gMaxStackSize = atoi(argv[i]);
-            break;
-
-        default:
-            return usage();
-        }
-    }
-
-    if (filename || isInteractive)
-        Process(cx, obj, filename, forceTTY);
     return gExitCode;
 }
 
@@ -995,9 +841,23 @@ static JSBool ShellInclude(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
 
 }
 
-static JSBool ShellReadline(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+static JSBool ShellReadline(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
-    return JS_FALSE;
+	JSBool status;
+    char * string[2];
+    jsval out;
+    string[0] = JS_ValueToNativeString(cx, argv[0]);
+    string[1] = readline(string[0]);
+    if (!string[1]) {
+        return JS_FALSE;
+    }
+    if (string[1][0] != '\0')
+        add_history(string[1]);
+    out = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, string[1]));
+
+    JS_FreeNativeStringArray(cx, string, 2);
+    JS_ReturnValue(out);
+
 }
 
 static JSBool ShellClear(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
@@ -1358,11 +1218,28 @@ static JSBool ShellEcho(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 	JS_ReturnValue(JSVAL_VOID);
 }
 
+static JSBool ShellExit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    int exitcode = JSVAL_TO_INT((argc == 1)?argv[0]:1);
+#ifdef JS_THREADSAFE
+    JS_EndRequest(cx);
+#endif
+
+    JS_DestroyContext(cx);
+    JS_DestroyRuntime(rt);
+    JS_ShutDown();
+
+    exit(exitcode);
+    return JS_TRUE;
+
+}
+
 static JSFunctionSpec shell_functions2[] = {
     JS_FS("include",        ShellInclude,  1,JSPROP_ENUMERATE,0),
     JS_FS("echo",        ShellEcho,        0,0,0),
     JS_FS("system",      ShellSystem,           1,0,0),
-    JS_FS("readline",       ShellReadline,       1,0,0),
+    JS_FS("readLine",       ShellReadline,       1,0,0),
     JS_FS("getFileContent",          ShellGetFileContent,          1,0,0),
     JS_FS("setFileContent",           ShellSetFileContent,           2,0,0),
     JS_FS("get",           ShellGet,           1,0,0),
@@ -1371,6 +1248,7 @@ static JSFunctionSpec shell_functions2[] = {
     JS_FS("keys",          ShellKeys,      0,0,0),
     JS_FS("fileExists",          ShellFileExists,      1,0,0),
     JS_FS("fileStatus",          ShellFileStat,      1,0,0),
+    JS_FS("exit",          ShellExit,      1,0,0),
     JS_FS_END
 };
 
@@ -1393,8 +1271,6 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
 int main(int argc, char **argv, char **envp) {
 
     int stackDummy;
-    JSRuntime *rt;
-    JSContext *cx;
     JSObject *glob, *envobj;
     int result;
 

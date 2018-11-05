@@ -18,7 +18,8 @@
                 "HAVE_VA_COPY",
                 "VA_COPY=va_copy",
                 "PIC",
-                "JS_THREADSAFE"
+                "JS_THREADSAFE",
+                "EDITLINE"
             ],
             "cStandard": "c11",
             "cppStandard": "c++17"
