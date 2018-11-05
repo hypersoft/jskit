@@ -93,6 +93,80 @@ void JS_FreeNativeStrings(JSContext * cx, ...) {
 #include <sys/wait.h>
 #endif
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+/*-------------------------------------------------------------------------*//**
+ * @brief      Set if the inputs must be displayed or not.
+ *
+ * @param[in]  display  True for display, false for no display
+ */
+void displayInputs(bool display);
+
+#if defined(_WIN32) || defined(_WIN64) || defined(WIN32) || defined(WIN64)
+
+#include <windows.h>
+
+void displayInputs(bool display) {
+    HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
+    if(hStdIn == INVALID_HANDLE_VALUE) {
+        fprintf(stderr, "GetStdHandle failed (error %lu)\n", GetLastError());
+        return;
+    }
+
+    /* Get console mode */
+    DWORD mode;
+    if(!GetConsoleMode(hStdIn, &mode)) {
+        fprintf(stderr, "GetConsoleMode failed (error %lu)\n", GetLastError());
+        return;
+    }
+
+    if(display) {
+        /* Add echo input to the mode */
+        if(!SetConsoleMode(hStdIn, mode | ENABLE_ECHO_INPUT)) {
+            fprintf(stderr, "SetConsoleMode failed (error %lu)\n", GetLastError());
+            return;
+        }
+    }
+    else {
+        /* Remove echo input to the mode */
+        if(!SetConsoleMode(hStdIn, mode & ~((DWORD) ENABLE_ECHO_INPUT))) {
+            fprintf(stderr, "SetConsoleMode failed (error %lu)\n", GetLastError());
+            return;
+        }
+    }
+}
+
+#else
+
+#include <termios.h>
+
+void displayInputs(bool display) {
+    struct termios t;
+
+    /* Get console mode */
+    errno = 0;
+    if (tcgetattr(STDIN_FILENO, &t)) {
+        fprintf(stderr, "tcgetattr failed (%s)\n", strerror(errno));
+        return;
+    }
+
+    /* Set console mode to echo or no echo */
+    if (display) {
+        t.c_lflag |= ECHO;
+    } else {
+        t.c_lflag &= ~((tcflag_t) ECHO);
+    }
+    errno = 0;
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &t)) {
+        fprintf(stderr, "tcsetattr failed (%s)\n", strerror(errno));
+        return;
+    }
+}
+
+#endif
+
 #if defined(XP_WIN) || defined(XP_OS2)
 #include <io.h>     /* for isatty() */
 #endif
@@ -816,12 +890,32 @@ static JSBool ShellReadline(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
     string[0] = JS_ValueToNativeString(cx, argv[0]);
     string[1] = readline(string[0]);
     if (!string[1]) {
+        JS_FreeNativeStringArray(cx, string, 1);
         return JS_FALSE;
     }
     if (string[1][0] != '\0')
         add_history(string[1]);
     out = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, string[1]));
 
+    JS_FreeNativeStringArray(cx, string, 2);
+    JS_ReturnValue(out);
+
+}
+
+static JSBool ShellReadPassword(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    char * string[2];
+    jsval out;
+    string[0] = JS_ValueToNativeString(cx, argv[0]);
+    displayInputs(false);
+    string[1] = readline(string[0]);
+    displayInputs(true);
+    if (!string[1]) {
+        JS_FreeNativeStringArray(cx, string, 1);
+        return JS_FALSE;
+    }
+    out = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, string[1]));
     JS_FreeNativeStringArray(cx, string, 2);
     JS_ReturnValue(out);
 
@@ -1224,6 +1318,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "clear", ShellClear, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "keys", ShellKeys, 0, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readLine", ShellReadline, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readPassword", ShellReadPassword, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "fileExists", ShellFileExists, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "getFileProperties", ShellFileStat, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readFile", ShellGetFileContent, 1, JSPROP_ENUMERATE);
