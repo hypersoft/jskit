@@ -298,7 +298,7 @@ Process(JSContext *cx, JSObject *obj, char *filename, JSBool forceTTY)
          */
         startline = lineno;
         do {
-            if (!GetLine(cx, bufp, file, startline == lineno ? "js> " : "")) {
+            if (!GetLine(cx, bufp, file, startline == lineno ? "jskit: " : "")) {
                 hitEOF = JS_TRUE;
                 break;
             }
@@ -308,7 +308,7 @@ Process(JSContext *cx, JSObject *obj, char *filename, JSBool forceTTY)
 
         /* Clear any pending exception from previous failed compiles.  */
         JS_ClearPendingException(cx);
-        script = JS_CompileScript(cx, obj, buffer, strlen(buffer), "typein",
+        script = JS_CompileScript(cx, obj, buffer, strlen(buffer), "console",
                                   startline);
         if (script) {
             if (!compileOnly) {
@@ -348,7 +348,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
         }
         if (strcmp(argv[0], "-i") == 0) {
             argc--; argv++;
-            interactive = JS_TRUE;
+            forceTTY = JS_TRUE;
             continue;
         }
         break;
