@@ -2,7 +2,7 @@
 
 /* global system, parameter */
 
-// include("/some/javascript/file.js")
+// Shell.include("/some/javascript/file.js")
 
 Shell.writeFile('js.out', parameter.join(", ") + '\n');
 // Shell.pushFile(FILE, CONTENTS) // for append mode
@@ -27,6 +27,8 @@ Shell.write('cat', Shell.read('ls').output);
 
 echo("you typed: ", Shell.readLine("type something > "));
 
+echo("All properties of Function: Shell:", Object.keys(Shell).join(", "));
+echo("exiting...");
 exit(0);
 
 echo("not reached");
