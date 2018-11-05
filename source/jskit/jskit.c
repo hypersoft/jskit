@@ -1280,12 +1280,11 @@ static JSBool ShellEcho(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 static JSBool ShellPrint(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 
-	uintN i, argFinal = argc - 1;
-	char *bytes;
+	char *bytes; uintn i;
 	for (i = 0; i < argc; i++) {
 		bytes = JS_ValueToNativeString(cx, argv[i]);
 		if (! bytes) continue;
-		printf("%s%s", i ? " " : "", bytes);
+		printf("%s", bytes);
 		JS_FreeNativeString(cx, bytes);
 	}
 	
@@ -1296,18 +1295,15 @@ static JSBool ShellPrint(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
 
 static JSBool ShellPrintError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
-
-	uintN i, argFinal = argc - 1;
+	uintN i;
 	char *bytes;
 	for (i = 0; i < argc; i++) {
 		bytes = JS_ValueToNativeString(cx, argv[i]);
 		if (! bytes) continue;
-		fprintf(stderr, "%s%s", i ? " " : "", bytes);
+		fprintf(stderr, "%s", bytes);
 		JS_FreeNativeString(cx, bytes);
 	}
-	
 	fflush(stdout);
-
 	JS_ReturnValue(JSVAL_VOID);
 }
 
