@@ -343,7 +343,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 
     while (argc) {
         if (strcmp(argv[0], "-s" ) == 0 ||  strcmp(argv[0], "--shell-script") == 0) {
-            filename = argv[1]; argc-=2; argv+=2;
+            filename = argv[1]; argc--; argv++;
             break;
         }
         if (strcmp(argv[0], "-i") == 0) {
@@ -963,7 +963,7 @@ static JSBool ShellSetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 
 }
 
-static JSBool ShellSetFileContentAppend(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+static JSBool ShellPushFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 	char * filename = JS_ValueToNativeString(cx, argv[0]);
 	if (!filename) {
@@ -1226,9 +1226,9 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readLine", ShellReadline, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "fileExists", ShellFileExists, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "getFileProperties", ShellFileStat, 1, JSPROP_ENUMERATE);
-    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "getFile", ShellGetFileContent, 1, JSPROP_ENUMERATE);
-    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "setFile", ShellSetFileContent, 2, JSPROP_ENUMERATE);
-    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "joinFile",          ShellSetFileContentAppend, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readFile", ShellGetFileContent, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "writeFile", ShellSetFileContent, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "pushFile", ShellPushFile, 2, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "exit",              ShellExit, 0, JSPROP_ENUMERATE);
 
     return JS_TRUE;

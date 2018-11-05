@@ -4,10 +4,10 @@
 
 // include("/some/javascript/file.js")
 
-Shell.setFile('js.out', parameter.join(", ") + '\n');
-// Shell.joinFile(FILE, CONTENTS)
+Shell.writeFile('js.out', parameter.join(", ") + '\n');
+// Shell.pushFile(FILE, CONTENTS) // for append mode
 
-var fileContent = Shell.getFile('js.out');
+var fileContent = Shell.readFile('js.out');
 echo("file content:", fileContent);
 
 Shell('rm js.out');
