@@ -60,6 +60,8 @@ BUILD_JS_KEYWORDS_PROGRAM = bin/jskwgen
 BUILD_JS_CPUCFG_PROGRAM = bin/jscpucfg
 BUILD_BIN2INC_PROGRAM = bin/bin2inc
 
+BUILD_AUTO_PROGRAMS = $(BUILD_BIN2INC_PROGRAM) $(BUILD_JS_CPUCFG_PROGRAM) $(BUILD_JS_KEYWORDS_PROGRAM)
+
 # production files
 BUILD_JS_LIBRARY_ARCHIVE = build/libjs/libjskit.a
 BUILD_JSKIT_PROGRAM = build/jskit/jskit
@@ -71,8 +73,7 @@ ALL_BUILT_OBJECTS = $(BUILD_BIN2INC_PROGRAM) \
 
 # program files
 ALL_BUILT_PROGRAMS = \
-	$(BUILD_JS_CPUCFG_PROGRAM) $(BUILD_JS_KEYWORDS_PROGRAM) $(BUILD_JS_LIBRARY_ARCHIVE) \
-	$(BUILD_JSKIT_PROGRAM) $(BUILD_BIN2INC_PROGRAM)
+	$(BUILD_AUTO_PROGRAMS) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_JSKIT_PROGRAM) 
 
 NSPR_CFLAGS = -I/usr/include/nspr
 NSPR_LIBS = -lm -L/usr/lib -lplds4 -lplc4 -lnspr4
@@ -150,18 +151,16 @@ endif
 
 dist: lib-dist bin-dist
 
-else
-
-all:
-
 debug: clean
 	@mkdir -p build;
 	@touch build/debug
-	@HYPER_MAKE=1 PATH=$(shell realpath .)/bin:$(PATH) make --no-print-directory -j all
 
 release: clean
 	@rm -f build/debug
-	@HYPER_MAKE=1 PATH=$(shell realpath .)/bin:$(PATH) make --no-print-directory -j all
+
+else
+
+all:
 
 %:
 	@TARGET=$@ HYPER_MAKE=1 PATH=$(shell realpath .)/bin:$(PATH) make --no-print-directory -j $@
