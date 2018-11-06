@@ -256,7 +256,6 @@ void PointerClassFinalize(JSContext *cx, JSObject *obj) {
     PointerData * pd = JS_GetPrivate(cx, obj);
     if (pd) {
         if (pd->p && pd->isAllocated) {
-            fprintf(stderr, "freeing pointer\n");
             JS_free(cx, pd->p);
         }
         JS_free(cx, pd);
@@ -1999,7 +1998,8 @@ static JSBool ShellBufferFree(JSContext *cx, JSObject *obj, uintN argc, jsval *a
             JS_ReturnCustomException("failed fo free foreign pointer: %s", pStr);
         }
         JS_free(cx, pd->p);
-        pd->p = NULL;
+        // erase it
+        memset(pd, 0, sizeof(PointerData));
     }
 
     JS_ReturnValue(JS_TRUE);
@@ -2098,7 +2098,6 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JS_DefineFunction(cx, fd, "close", ShellFDClose, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, fd, "type", ShellFDType, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, fd, "properties", ShellFDProperties, 1, JSPROP_ENUMERATE);
-//    JS_DefineFunction(cx, fd, "std", ShellFDStd, 1, JSPROP_ENUMERATE);
     JS_DefineElement(cx, fd, 0, 0, ShellFDGetStandard, NULL, JSPROP_ENUMERATE);
     JS_DefineElement(cx, fd, 1, 0, ShellFDGetStandard, NULL, JSPROP_ENUMERATE);
     JS_DefineElement(cx, fd, 2, 0, ShellFDGetStandard, NULL, JSPROP_ENUMERATE);
