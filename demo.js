@@ -5,8 +5,7 @@
 x = Shell.buffer(8, 1);
 x.isDouble = true;
 x[0] = 10.1;
-x[1] = 4.1;
-echo(x[0]);
+echo(x);
 exit(0);
 // Shell.source("/some/javascript/file.js")
 Shell.fd.read(Shell.fd[0], [], 2);
