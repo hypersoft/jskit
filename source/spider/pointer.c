@@ -44,6 +44,9 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         } else if (strcmp(nid, "isPointer") == 0) {
             pd->isPointer = JSVAL_TO_BOOLEAN(*vp);
             JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "isStruct") == 0) {
+            pd->isStruct = JSVAL_TO_BOOLEAN(*vp);
+            JS_ReturnValue(JS_TRUE);
         }
         JS_ReturnCustomException("invalid property set request: %s", nid);
     }
@@ -185,22 +188,18 @@ JSBool PointerClassConvert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 
     switch (type) {
         case JSTYPE_NUMBER: {
-            JS_ReturnValue(DOUBLE_TO_JSVAL(pd->p));
+            jsval n = 0;
+            JS_NewNumberValue(cx, (double) (uintptr_t) pd->p, &n);
+            JS_ReturnValue(n);
             break;
         }
         case JSTYPE_BOOLEAN: {
             JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->p != NULL));
             break;
         }
-        case JSTYPE_STRING: {
-            if (pd->isString) {
-                if (pd->size == 1) JS_ReturnValue(STRING_TO_JSVAL(JS_NewStringCopyN(cx, pd->p, pd->length)));
-            }
-            int i = sprintf(b, "0x%" PRIXPTR, pd->p);
-            JS_ReturnValue(STRING_TO_JSVAL(JS_NewStringCopyN(cx, b, i)));
-        }
         default: JS_ReturnValue(JS_FALSE);
     }
+
 }
 
 JSClass pointer_class = {
