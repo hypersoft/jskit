@@ -175,8 +175,6 @@ void PointerClassFinalize(JSContext *cx, JSObject *obj) {
     }
 }
 
-#include <inttypes.h>
-
 JSBool PointerClassConvert(JSContext *cx, JSObject *obj, JSType type, jsval *vp) {
 
     PointerData * pd = JS_GetPrivate(cx, obj);
