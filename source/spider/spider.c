@@ -41,10 +41,21 @@
 /* wtf */
 #endif
 
+#if SYSTEM_CPU_BITS == 64
+#define PR_Seek PR_Seek64
+#define PR_Available PR_Available64
+#define PRFileInfo PRFileInfo64
+#define PR_GetFileInfo PR_GetFileInfo64
+#define PR_GetOpenFileInfo PR_GetOpenFileInfo64
+#endif
+
 #include "object-keys-patch.c"
 
 JSRuntime *rt;
 JSContext *cx;
+
+#define POINTER_TO_JSVAL(CX, PTR) OBJECT_TO_JSVAL(JSNewPointer(cx, PTR))
+#define JSVAL_TO_POINTER(CX, VAL) JS_GetPrivate(cx, JSVAL_TO_OBJECT(VAL))
 
 void JS_FreeNativeStrings(JSContext * cx, ...) {
     va_list args;
@@ -57,35 +68,14 @@ void JS_FreeNativeStrings(JSContext * cx, ...) {
 #define STRINGIZE(x) #x
 #define M180_GetCompilerString(x) STRINGIZE(x)
 
-/**
- * This override ensures the final parameter to the procedure of the same name is null
- */
+void * JS_GarbagePointer(JSContext *, void *);
+#define JS_ValueToNativeString(CX, JSVAL) ((char *) JS_GarbagePointer(CX, JS_EncodeString(CX, JS_ValueToString(CX, JSVAL))))
 
-#define JS_ValueToNativeString(CX, JSVAL) ((char *) JS_EncodeString(CX, JS_ValueToString(CX, JSVAL)))
-#define JS_FreeNativeString(CX, STRING) JS_free(CX, STRING)
+#define JS_ReturnValue(VAL) JS_SET_RVAL((JSContext *)cx, vp, VAL); JS_MaybeGC(cx); return JS_TRUE
+#define JS_ReturnError() JS_MaybeGC(cx); return JS_FALSE
 
-#define JS_FreeNativeStrings(CX, ...) JS_FreeNativeStrings(CX, __VA_ARGS__, NULL)
-
-/**
- * M180 Requires functions to have cx and vp named for these to work
- */
-#define JS_ReturnValueEscape(VAL, ...) JS_FreeNativeStrings((JSContext *)cx, __VA_ARGS__); JS_ReturnValue(VAL)
-#define JS_ReturnValue(VAL) JS_SET_RVAL((JSContext *)cx, vp, VAL); return JS_TRUE
-#define JS_ReturnError() return JS_FALSE
-#define JS_ReturnErrorEscape(...) JS_FreeNativeStrings((JSContext *)cx, __VA_ARGS__); JS_ReturnError()
-
-/**
- * Report an error with 1 format parameter, free supplied strings and return from the procedure
-*/ 
-#define JS_ReturnException(FORMAT, ...) JS_ReportError((JSContext *)cx, FORMAT, __VA_ARGS__); JS_FreeNativeStrings((JSContext *)cx, __VA_ARGS__); JS_ReturnError()
-/**
- * Report an error with 2 format parameters, free supplied strings and return from the procedure
-*/ 
-#define JS_ReturnExceptionEscape(FORMAT, MSG, ...) JS_ReportError((JSContext *)cx, FORMAT, MSG); JS_FreeNativeStrings((JSContext *)cx, __VA_ARGS__); JS_ReturnError()
-/**
- * Report an error with 3 format parameters, free supplied strings and return from the procedure
-*/ 
-#define JS_ReturnExceptionEscape2(FORMAT, MSG, MSG2, ...) JS_ReportError((JSContext *)cx, FORMAT, MSG, MSG2); JS_FreeNativeStrings((JSContext *)cx, __VA_ARGS__); JS_ReturnError()
+#define JS_ReturnException(FORMAT) JS_ReportError((JSContext *)cx, FORMAT, NULL); JS_ReturnError()
+#define JS_ReturnCustomException(FORMAT, ...) JS_ReportError((JSContext *)cx, FORMAT, __VA_ARGS__); JS_ReturnError()
 
 #ifdef XP_UNIX
 #include <unistd.h>
@@ -96,6 +86,239 @@ void JS_FreeNativeStrings(JSContext * cx, ...) {
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
+typedef struct PtrClassData  {
+    void *p;
+    int size, length, bytes;
+    bool isDouble, isFloat, isSigned, isAllocated, isReadOnly, isString, isPointer, isStruct;
+} PointerData;
+
+PointerData NewPointerData(uintptr_t * p) {
+    return (PointerData) {p, 0, 0, 0, false, false, false, false, false, false, false, false};
+}
+
+JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    if (JSVAL_IS_STRING(id)) {
+        char * nid = JS_ValueToNativeString(cx, id);
+        if (strcmp(nid, "bytes") == 0) {
+            JS_ReturnException("trying to manually set byte length");
+        } else if (strcmp(nid, "size") == 0) {
+            pd->size = JSVAL_TO_INT(*vp);
+            pd->bytes = pd->length * pd->size;
+            JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "length") == 0 ) {
+            pd->length = JSVAL_TO_INT(*vp);
+            pd->bytes = pd->length * pd->size;
+            JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "isDouble") == 0) {
+            pd->isDouble = JSVAL_TO_BOOLEAN(*vp);
+            JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "isFloat") == 0) {
+            pd->isFloat = JSVAL_TO_BOOLEAN(*vp);
+            JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "isSigned") == 0) {
+            pd->isSigned = JSVAL_TO_BOOLEAN(*vp);
+            JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "isAllocated") == 0) {
+            pd->isAllocated = JSVAL_TO_BOOLEAN(*vp);
+            JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "isReadOnly") == 0) {
+            pd->isReadOnly = JSVAL_TO_BOOLEAN(*vp);
+            JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "isString") == 0) {
+            pd->isString = JSVAL_TO_BOOLEAN(*vp);
+            JS_ReturnValue(JS_TRUE);
+        } else if (strcmp(nid, "isPointer") == 0) {
+            pd->isPointer = JSVAL_TO_BOOLEAN(*vp);
+            JS_ReturnValue(JS_TRUE);
+        }
+        JS_ReturnCustomException("invalid property set request: %s", nid);
+    }
+
+    if (pd->p == 0) {
+        JS_ReturnException("cannot write null pointer");
+    } else if (pd->isReadOnly) {
+        JS_ReturnException("cannot write data to read only pointer");
+    }
+
+    register long index = JSVAL_TO_INT(id);
+    if (index >= pd->length) {
+        JS_ReturnCustomException("buffer write overflow with position: %i; limit: %i", index, pd->length);
+    }
+
+    register double value = 0;
+
+    if (JSVAL_IS_DOUBLE(*vp)) {
+        value = *JSVAL_TO_DOUBLE(*vp);
+    } else {
+        value = JSVAL_TO_INT(*vp);
+    }
+
+    switch (pd->size) {
+        case 1: { register char * x = pd->p; x[index] = value; break; }
+        case 2: { register short * x = pd->p; x[index] = value; break; }
+        case 4: {
+            if (pd->isFloat) { register float32 * x = pd->p; x[index] = value; }
+            else { register int32_t * x = pd->p; x[index] = value; }
+            break;
+        }
+        case 8: {
+            if (pd->isFloat) { register float64 * x = pd->p; x[index] = value; }
+            else if (pd->isDouble) { register double * x = pd->p; x[index] = value; }
+            else { register int64_t * x = pd->p; x[index] = value; }
+            break;
+        }
+        default: { JS_ReturnCustomException("invalid pointer type size: %i", pd->size); }
+    }
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    if (JSVAL_IS_STRING(id))  {
+        char * nid = JS_ValueToNativeString(cx, id);
+        if (strcmp(nid, "bytes") == 0) {
+            jsval bytes = INT_TO_JSVAL(pd->bytes);
+            JS_ReturnValue(bytes);
+        } else if (strcmp(nid, "size") == 0) {
+            jsval bytes = INT_TO_JSVAL(pd->size);
+            JS_ReturnValue(bytes);
+        } else if (strcmp(nid, "length") == 0 ) {
+            jsval bytes = INT_TO_JSVAL(pd->length);
+            JS_ReturnValue(bytes);
+        } else if (strcmp(nid, "isDouble") == 0) {
+            jsval boolean = BOOLEAN_TO_JSVAL(pd->isDouble);
+            JS_ReturnValue(boolean);
+        } else if (strcmp(nid, "isFloat") == 0) {
+            jsval boolean = BOOLEAN_TO_JSVAL(pd->isFloat);
+            JS_ReturnValue(boolean);
+        } else if (strcmp(nid, "isSigned") == 0) {
+            jsval boolean = BOOLEAN_TO_JSVAL(pd->isSigned);
+            JS_ReturnValue(boolean);
+        } else if (strcmp(nid, "isAllocated") == 0) {
+            jsval boolean = BOOLEAN_TO_JSVAL(pd->isAllocated);
+            JS_ReturnValue(boolean);
+        } else if (strcmp(nid, "isReadOnly") == 0) {
+            jsval boolean = BOOLEAN_TO_JSVAL(pd->isReadOnly);
+            JS_ReturnValue(boolean);
+        } else if (strcmp(nid, "isString") == 0) {
+            jsval boolean = BOOLEAN_TO_JSVAL(pd->isString);
+            JS_ReturnValue(boolean);
+        } else if (strcmp(nid, "isPointer") == 0) {
+            jsval boolean = BOOLEAN_TO_JSVAL(pd->isPointer);
+            JS_ReturnValue(boolean);
+        } else if (strcmp(nid, "isStruct") == 0) {
+            jsval boolean = BOOLEAN_TO_JSVAL(pd->isStruct);
+            JS_ReturnValue(boolean);
+        }
+        JS_ReturnCustomException("invalid property get request: %s", nid);
+    }
+
+    if (pd->p == 0) { JS_ReturnException("cannot read null pointer"); }
+
+    register long index = JSVAL_TO_INT(id);
+
+    if (index >= pd->length) {
+        JS_ReturnCustomException("buffer read overflow with position: %i; limit: %i", index, pd->length);
+    }
+
+    /* for */ jsval jsv; switch (pd->size) {
+        case 1: {
+            if (pd->isSigned) { register signed char * x = pd->p; jsv = DOUBLE_TO_JSVAL(x[index]); }
+            else { register unsigned char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            break;
+        }
+        case 2: {
+            if (pd->isSigned) { register signed short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            else { register unsigned short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            break;
+        }
+        case 4: {
+            if (pd->isFloat) { register float32 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else if (pd->isSigned) { register int32_t * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            else { register uint32_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            break;
+        }
+        case 8: {
+            if (pd->isFloat) { register float64 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else if (pd->isDouble) { register double * x = pd->p; JS_NewNumberValue(cx, x[index], &jsv); }
+            else if (pd->isSigned) { register int64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else { register uint64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            break;
+        }
+        default: { JS_ReturnCustomException("invalid pointer type size: %i", pd->size); }
+    }
+    JS_ReturnValue(jsv);
+}
+
+void PointerClassFinalize(JSContext *cx, JSObject *obj) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    if (pd) {
+        if (pd->p && pd->isAllocated) {
+            fprintf(stderr, "freeing pointer\n");
+            JS_free(cx, pd->p);
+        }
+        JS_free(cx, pd);
+    }
+    //JS_SetPrivate(cx, obj, NULL);
+}
+
+#include <inttypes.h>
+
+JSBool PointerClassConvert(JSContext *cx, JSObject *obj, JSType type, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    char b[64];
+
+    if (!pd) {
+        JS_ReturnException("couldn't get pointer header");
+    }
+
+    switch (type) {
+        case JSTYPE_NUMBER: {
+            JS_ReturnValue(DOUBLE_TO_JSVAL(pd->p));
+            break;
+        }
+        case JSTYPE_BOOLEAN: {
+            JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->p != NULL));
+            break;
+        }
+        case JSTYPE_STRING: {
+            if (pd->isString) {
+                if (pd->size == 1) JS_ReturnValue(STRING_TO_JSVAL(JS_NewStringCopyN(cx, pd->p, pd->length)));
+            }
+            int i = sprintf(b, "0x%" PRIXPTR, pd->p);
+            JS_ReturnValue(STRING_TO_JSVAL(JS_NewStringCopyN(cx, b, i)));
+        }
+        default: JS_ReturnValue(JS_FALSE);
+    }
+}
+
+JSClass pointer_class = {
+    "pointer", JSCLASS_HAS_PRIVATE,
+    JS_PropertyStub,  JS_PropertyStub,
+    PointerClassGetPoint,  PointerClassSetPoint,
+    JS_EnumerateStub, JS_ResolveStub,
+    PointerClassConvert,   PointerClassFinalize,
+    JSCLASS_NO_OPTIONAL_MEMBERS
+};
+
+JSObject * JSNewPointer(JSContext * cx, void * p) {
+    PointerData * pd = JS_malloc(cx, sizeof(PointerData));
+    *pd = NewPointerData(p);
+    JSObject * out = JS_NewObject(cx, &pointer_class, NULL, NULL);
+    JS_SetPrivate(cx, out, pd);
+    return out;
+}
+
+void * JS_GarbagePointer(JSContext * cx, void * garbage) {
+    if (garbage) {
+        JSObject * ptr = JSNewPointer(cx, garbage);
+        PointerData * pd = JS_GetPrivate(cx, ptr);
+        pd->isAllocated = true;
+    }
+    return garbage;
+}
 
 /*-------------------------------------------------------------------------*//**
  * @brief      Set if the inputs must be displayed or not.
@@ -111,28 +334,28 @@ void displayInputs(bool display);
 void displayInputs(bool display) {
     HANDLE hStdIn = GetStdHandle(STD_INPUT_HANDLE);
     if(hStdIn == INVALID_HANDLE_VALUE) {
-        fprintf(stderr, "GetStdHandle failed (error %lu)\n", GetLastError());
+        fprintf(stderr, "GetStdHandle failed (error %iu)\n", GetLastError());
         return;
     }
 
     /* Get console mode */
     DWORD mode;
     if(!GetConsoleMode(hStdIn, &mode)) {
-        fprintf(stderr, "GetConsoleMode failed (error %lu)\n", GetLastError());
+        fprintf(stderr, "GetConsoleMode failed (error %iu)\n", GetLastError());
         return;
     }
 
     if(display) {
         /* Add echo input to the mode */
         if(!SetConsoleMode(hStdIn, mode | ENABLE_ECHO_INPUT)) {
-            fprintf(stderr, "SetConsoleMode failed (error %lu)\n", GetLastError());
+            fprintf(stderr, "SetConsoleMode failed (error %iu)\n", GetLastError());
             return;
         }
     }
     else {
         /* Remove echo input to the mode */
         if(!SetConsoleMode(hStdIn, mode & ~((DWORD) ENABLE_ECHO_INPUT))) {
-            fprintf(stderr, "SetConsoleMode failed (error %lu)\n", GetLastError());
+            fprintf(stderr, "SetConsoleMode failed (error %iu)\n", GetLastError());
             return;
         }
     }
@@ -444,8 +667,9 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
         JSString *str = JS_NewStringCopyZ(cx, argv[i]);
         if (!str)
             return 1;
-        if (!JS_DefineElement(cx, argsObj, i, STRING_TO_JSVAL(str),
-                              NULL, NULL, JSPROP_ENUMERATE)) {
+        jsval jsv;
+        jsv = STRING_TO_JSVAL(str);
+        if (!JS_SetElement(cx, argsObj, i, &jsv)) {
             return 1;
         }
     }
@@ -595,6 +819,7 @@ JSClass global_class = {
     JS_ConvertStub,   JS_FinalizeStub,
     JSCLASS_NO_OPTIONAL_MEMBERS
 };
+
 
 static JSBool
 ContextCallback(JSContext *cx, uintN contextOp)
@@ -867,7 +1092,7 @@ static JSBool ExecScriptFile(JSContext * context, JSObject * global, const char 
 
 }
 
-static JSBool ShellInclude(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+static JSBool ShellInclude(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
     if (argc == 0) {
         return JS_FALSE;
@@ -876,9 +1101,8 @@ static JSBool ShellInclude(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
 	JSBool status;
     char * string[1];
     string[0] = JS_ValueToNativeString(cx, argv[0]);
-	status = ExecScriptFile(cx, JS_GetGlobalObject(cx), string[0], rval);
-    JS_FreeNativeStringArray(cx, &string[0], 1);
-	return status;
+	status = ExecScriptFile(cx, JS_GetGlobalObject(cx), string[0], vp);
+    JS_ReturnValue(status);
 
 }
 
@@ -889,15 +1113,17 @@ static JSBool ShellReadline(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
     jsval out;
     string[0] = JS_ValueToNativeString(cx, argv[0]);
     string[1] = readline(string[0]);
+
     if (!string[1]) {
-        JS_FreeNativeStringArray(cx, string, 1);
-        return JS_FALSE;
+        JS_ReturnError();
     }
+
+    JS_GarbagePointer(cx, string[1]);
+
     if (string[1][0] != '\0')
         add_history(string[1]);
     out = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, string[1]));
 
-    JS_FreeNativeStringArray(cx, string, 2);
     JS_ReturnValue(out);
 
 }
@@ -908,15 +1134,18 @@ static JSBool ShellReadPassword(JSContext *cx, JSObject *obj, uintN argc, jsval 
     char * string[2];
     jsval out;
     string[0] = JS_ValueToNativeString(cx, argv[0]);
+
     displayInputs(false);
     string[1] = readline(string[0]);
     displayInputs(true);
+
     if (!string[1]) {
-        JS_FreeNativeStringArray(cx, string, 1);
-        return JS_FALSE;
+        JS_ReturnError();
     }
+
+    JS_GarbagePointer(cx, string[1]);
     out = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, string[1]));
-    JS_FreeNativeStringArray(cx, string, 2);
+
     JS_ReturnValue(out);
 
 }
@@ -924,14 +1153,16 @@ static JSBool ShellReadPassword(JSContext *cx, JSObject *obj, uintN argc, jsval 
 static JSBool ShellClear(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 
-  char * key = JS_ValueToNativeString(cx, argv[0]);
-
-	if (!key) {
-		JS_ReturnException("failed to get environment variable key from javascript", NULL);
+    char * key = JS_ValueToNativeString(cx, argv[0]);
+	
+    if (!key) {
+		JS_ReturnException("failed to get environment variable key from javascript");
 	}
 
 	unsetenv(key);
-	JS_ReturnValueEscape(JSVAL_TRUE, key);
+
+	JS_ReturnValue(JSVAL_TRUE);
+
 }
 
 extern char ** environ;
@@ -946,7 +1177,9 @@ static JSBool ShellKeys(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 		char t;
 		while ((t = variable[split]) != 0 && t != '=') split++;
 		JSString * str = JS_NewStringCopyN(cx, variable, split);
-		JS_DefineElement(cx, argsObj, i++, STRING_TO_JSVAL(str), NULL, NULL, JSPROP_ENUMERATE);
+        jsval jsv;
+        jsv = STRING_TO_JSVAL(str);
+		JS_SetElement(cx, argsObj, i++, &jsv);
 	}
 	JS_ReturnValue(OBJECT_TO_JSVAL(argsObj));
 }
@@ -956,7 +1189,7 @@ static JSBool ShellGet(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   char * key = JS_ValueToNativeString(cx, argv[0]);
 	
 	if (!key) {
-		JS_ReturnException("failed to get environment variable key from javascript", NULL);
+		JS_ReturnException("failed to get environment variable key from javascript");
 	}
 
 	char * variable = getenv(key);
@@ -974,20 +1207,21 @@ static JSBool ShellSet(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   char * filename = JS_ValueToNativeString(cx, argv[0]);
 	
 	if (!filename) {
-		JS_ReturnException("failed to get environment variable key from javascript", NULL);
+		JS_ReturnException("failed to get environment variable key from javascript");
 	}
   
 	char * contents = JS_ValueToNativeString(cx, argv[1]);
 	
 	if (!contents) {
-		JS_ReturnExceptionEscape("failed to get data for environment variable: %s; from javascript", filename, filename);
+		JS_ReturnCustomException("failed to get data for environment variable: %s; from javascript", filename);
 	}
 
 	int overwrite = (argc > 2) ? JSVAL_TO_INT(argv[2]) : 1;
 
 	int r = setenv(filename, contents, overwrite);
 
-	JS_ReturnValueEscape(BOOLEAN_TO_JSVAL(r == 0), filename, contents);
+	JS_ReturnValue(BOOLEAN_TO_JSVAL(r == 0));
+
 }
 
 static JSBool ShellFileStat(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
@@ -995,36 +1229,20 @@ static JSBool ShellFileStat(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
 	char * filename = JS_ValueToNativeString(cx, argv[0]);
 
 	if (!filename) {
-		JS_ReturnException("can't convert file name to string", NULL);
+		JS_ReturnException("can't convert file name to string");
 	}
 
 	JSObject * out = JS_NewObject(cx, NULL, NULL, NULL);
 
-#if (SYSTEM_CPU_BITS == 64)
-
-	PRFileInfo64 fInfo;
-	if (PR_GetFileInfo64(filename, &fInfo) != PR_SUCCESS) {
-		JS_ReturnExceptionEscape("failed to read status of file handle for: %s", filename, filename);
-	};
-
-	JS_DefineProperty(cx, out, "type", INT_TO_JSVAL(fInfo.type), NULL, NULL, JSPROP_ENUMERATE);
-	JS_DefineProperty(cx, out, "creationTime", INT_TO_JSVAL(fInfo.creationTime), NULL, NULL, JSPROP_ENUMERATE);
-	JS_DefineProperty(cx, out, "modificationTime", INT_TO_JSVAL(fInfo.modifyTime), NULL, NULL, JSPROP_ENUMERATE);
-	JS_DefineProperty(cx, out, "size", INT_TO_JSVAL(fInfo.size), NULL, NULL, JSPROP_ENUMERATE);
-
-#else
-
 	PRFileInfo fInfo;
 	if (PR_GetFileInfo(filename, &fInfo) != PR_SUCCESS) {
-		JS_ReturnExceptionEscape("failed to read file stats of: %s", filename, filename);
+		JS_ReturnCustomException("failed to read file stats of: %s", filename);
 	};
 
 	JS_DefineProperty(cx, out, "type", INT_TO_JSVAL(fInfo.type), NULL, NULL, JSPROP_ENUMERATE);
 	JS_DefineProperty(cx, out, "creationTime", INT_TO_JSVAL(fInfo.creationTime), NULL, NULL, JSPROP_ENUMERATE);
 	JS_DefineProperty(cx, out, "modificationTime", INT_TO_JSVAL(fInfo.modifyTime), NULL, NULL, JSPROP_ENUMERATE);
 	JS_DefineProperty(cx, out, "size", INT_TO_JSVAL(fInfo.size), NULL, NULL, JSPROP_ENUMERATE);
-
-#endif
 	
 	JS_DefineProperty(cx, out, "writable", BOOLEAN_TO_JSVAL(PR_Access(filename, PR_ACCESS_WRITE_OK) == PR_SUCCESS), NULL, NULL, JSPROP_ENUMERATE);
 	JS_DefineProperty(cx, out, "readable", BOOLEAN_TO_JSVAL(PR_Access(filename, PR_ACCESS_READ_OK) == PR_SUCCESS), NULL, NULL, JSPROP_ENUMERATE);
@@ -1037,7 +1255,7 @@ static JSBool ShellSetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 {
 	char * filename = JS_ValueToNativeString(cx, argv[0]);
 	if (!filename) {
-		JS_ReturnException("failed to get file name from javascript", NULL);
+		JS_ReturnException("failed to get file name from javascript");
 	}
 	// todo: abort if file is a directory
 
@@ -1045,7 +1263,7 @@ static JSBool ShellSetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 
 	FILE * file = fopen(filename, "w");
 	if (!file) {
-		JS_ReturnExceptionEscape("failed to open file: %s; for writing", filename, filename, contents);
+		JS_ReturnCustomException("failed to open file: %s; for writing", filename);
 	}
 
 	long contentLength = strlen(contents);
@@ -1053,7 +1271,7 @@ static JSBool ShellSetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 	fwrite(contents, 1, contentLength, file);
 	fclose(file);
 
-	JS_ReturnValueEscape(DOUBLE_TO_JSVAL(contentLength), filename, contents);
+	JS_ReturnValue(DOUBLE_TO_JSVAL(contentLength));
 
 }
 
@@ -1061,7 +1279,7 @@ static JSBool ShellPrintFile(JSContext *cx, JSObject *obj, uintN argc, jsval *ar
 {
 	char * filename = JS_ValueToNativeString(cx, argv[0]);
 	if (!filename) {
-		JS_ReturnException("failed to get file name from javascript", NULL);
+		JS_ReturnException("failed to get file name from javascript");
 	}
 	// todo: abort if file is a directory
 
@@ -1069,7 +1287,7 @@ static JSBool ShellPrintFile(JSContext *cx, JSObject *obj, uintN argc, jsval *ar
 
 	FILE * file = fopen(filename, "a");
 	if (!file) {
-		JS_ReturnExceptionEscape("failed to open file: %s; for appending", filename, filename, contents);
+		JS_ReturnCustomException("failed to open file: %s; for appending", filename);
 	}
 
 	long contentLength = strlen(contents);
@@ -1077,7 +1295,7 @@ static JSBool ShellPrintFile(JSContext *cx, JSObject *obj, uintN argc, jsval *ar
 	fwrite(contents, 1, contentLength, file);
 	fclose(file);
 
-	JS_ReturnValueEscape(DOUBLE_TO_JSVAL(contentLength), filename, contents);
+	JS_ReturnValue(DOUBLE_TO_JSVAL(contentLength));
 }
 
 static JSBool ShellGetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
@@ -1085,40 +1303,27 @@ static JSBool ShellGetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 
 	char * cmd = JS_ValueToNativeString(cx, argv[0]);
 	if (!cmd) {
-		JS_ReturnException("failed to get file name from javascript", NULL);
+		JS_ReturnException("failed to get file name from javascript");
 	}
 
 	PRFileDesc * fp = PR_Open(cmd, PR_RDONLY, 0);
 	if (fp == NULL) {
-		JS_ReturnExceptionEscape("failed to open file: %s", cmd, cmd);
+        JS_ReturnCustomException("failed to open file: %s", cmd);
 	}
 
 	char *buf = NULL;
 	size_t len = 0;
 
-#if (SYSTEM_CPU_BITS == 64)
-
-	PRFileInfo64 fInfo;
-	if (PR_GetOpenFileInfo64(fp, &fInfo) != PR_SUCCESS) {
-		JS_ReturnExceptionEscape("failed to read status of file handle for: %s", cmd, cmd);
-	};
-
-	len = fInfo.size + 1;
-
-#else
-
 	PRFileInfo fInfo;
 	if (PR_GetOpenFileInfo(fp, &fInfo) != PR_SUCCESS) {
-		JS_ReturnExceptionEscape("failed to read status of file handle for: %s", cmd, cmd);
+		JS_ReturnCustomException("failed to read status of file handle for: %s", cmd);
 	};
 
 	len = fInfo.size + 1;
-
-#endif
 
 	buf = (char *) malloc(len * sizeof (char));
 	if (!buf) {
-		JS_ReturnExceptionEscape("failed to allocate input buffer for file handle of: %s", cmd, cmd);
+		JS_ReturnCustomException("failed to allocate input buffer for file handle of: %s", cmd);
 	}
 
 	PR_Read(fp, buf, len - 1);
@@ -1126,7 +1331,7 @@ static JSBool ShellGetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 	JSString * contents = JS_NewStringCopyN(cx, (const char *) buf, len - 1);
 	free(buf);
 	if (!contents) {
-		JS_ReturnExceptionEscape("failed to allocate javascript string for file handle of: %s", cmd, cmd);
+		JS_ReturnCustomException("failed to allocate javascript string for file handle of: %s", cmd);
 	}
 
 	JS_ReturnValue(STRING_TO_JSVAL(contents));
@@ -1137,26 +1342,27 @@ static JSBool ShellFileExists(JSContext *cx, JSObject *obj, uintN argc, jsval *a
 {
   char * filename = JS_ValueToNativeString(cx, argv[0]);
 	if (!filename) {
-		JS_ReturnException("failed to get file name from javascript", NULL);
+		JS_ReturnException("failed to get file name from javascript");
 	}
 
-	JS_ReturnValueEscape(
-		BOOLEAN_TO_JSVAL(
-			PR_Access(filename, PR_ACCESS_EXISTS) == PR_SUCCESS
-		), filename);
+	JS_ReturnValue(BOOLEAN_TO_JSVAL(
+        PR_Access(filename, PR_ACCESS_EXISTS) == PR_SUCCESS
+    ));
 
 }
 
 static JSBool ShellSystemWrite(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 	char * cmd = JS_ValueToNativeString(cx, argv[0]);
+
 	if (!cmd) {
-		JS_ReturnException("failed to get command string from javascript", NULL);
+		JS_ReturnException("failed to get command string from javascript");
 	}
 
 	char * content = JS_ValueToNativeString(cx, argv[1]);
+
 	if (!content) {
-		JS_ReturnExceptionEscape("failed to get content for command: %s", cmd, cmd);
+		JS_ReturnCustomException("failed to get content for command: %s", cmd);
 	}
 
 	FILE *fp;
@@ -1164,14 +1370,14 @@ static JSBool ShellSystemWrite(JSContext *cx, JSObject *obj, uintN argc, jsval *
 	/* Open the command for reading. */
 	fp = popen(cmd, "w");
 	if (fp == NULL) {
-		JS_ReturnExceptionEscape("failed to run: %s", cmd, cmd, content);
+		JS_ReturnCustomException("failed to run: %s", cmd);
 	}
 
 	long contentLength = strlen(content);
 
 	fwrite(content, 1, contentLength, fp);
 
-	JS_ReturnValueEscape(INT_TO_JSVAL(pclose(fp)), cmd, content);
+	JS_ReturnValue(INT_TO_JSVAL(pclose(fp)));
 
 }
 
@@ -1180,8 +1386,7 @@ static JSBool ShellSystemRead(JSContext *cx, JSObject *obj, uintN argc, jsval *a
 	char * cmd = JS_ValueToNativeString(cx, argv[0]);
 
 	if (!cmd) {
-		JS_ReportError(cx, "failed to get string from javascript", NULL);
-		return JS_FALSE;
+		JS_ReturnException("failed to get string from javascript");
 	}
 
 	FILE *fp;
@@ -1191,10 +1396,8 @@ static JSBool ShellSystemRead(JSContext *cx, JSObject *obj, uintN argc, jsval *a
 	fp = popen(cmd, "r");
 
 	if (fp == NULL) {
-		JS_ReturnExceptionEscape("failed to run command: %s", cmd, cmd);
+		JS_ReturnCustomException("failed to run command: %s", cmd);
 	}
-
-	JS_FreeNativeString(cx, cmd);
 
 	StringBuffer io = NewStringBuffer();
 	/* Read the output a line at a time - output it. */
@@ -1216,14 +1419,246 @@ static JSBool ShellSystemRead(JSContext *cx, JSObject *obj, uintN argc, jsval *a
 
 static JSBool ShellSystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
+    if (argc != 1) {
+		JS_ReturnException("this procedure requires one parameter: system command string");
+    }
+
 	char * cmd = JS_ValueToNativeString(cx, argv[0]);
+
 	if (!cmd) {
-		JS_ReturnException("failed to get command string from javascript", NULL);
+		JS_ReturnException("failed to get command string from javascript");
 	}
 
 	int rc = system(cmd);
 
-	JS_ReturnValueEscape(INT_TO_JSVAL(rc), cmd);
+	JS_ReturnValue(INT_TO_JSVAL(rc));
+}
+
+static JSBool ShellFDProperties(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+	PRFileDesc * filename = JSVAL_TO_POINTER(cx, argv[0]);
+
+	if (!filename) {
+		JS_ReturnException("can't convert file name to string");
+	}
+
+	JSObject * out = JS_NewObject(cx, NULL, NULL, NULL);
+
+	PRFileInfo fInfo;
+	if (PR_GetOpenFileInfo(filename, &fInfo) != PR_SUCCESS) {
+		JS_ReturnCustomException("failed to read file stats of: %s", filename);
+	};
+
+	JS_DefineProperty(cx, out, "type", INT_TO_JSVAL(fInfo.type), NULL, NULL, JSPROP_ENUMERATE);
+	JS_DefineProperty(cx, out, "creationTime", INT_TO_JSVAL(fInfo.creationTime), NULL, NULL, JSPROP_ENUMERATE);
+	JS_DefineProperty(cx, out, "modificationTime", INT_TO_JSVAL(fInfo.modifyTime), NULL, NULL, JSPROP_ENUMERATE);
+	JS_DefineProperty(cx, out, "size", INT_TO_JSVAL(fInfo.size), NULL, NULL, JSPROP_ENUMERATE);
+
+	JS_ReturnValue(OBJECT_TO_JSVAL(out));
+
+}
+
+static JSBool ShellFDType(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (argc != 1) {
+		JS_ReturnException("this procedure requires one parameter: FILEDESC");
+    }
+
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+    PRFileDesc * pfd = pd->p;
+    int r = PR_GetDescType(pfd);
+
+    JS_ReturnValue(INT_TO_JSVAL(r));
+
+}
+
+// TODO: return an allocated buffer pointer
+static JSBool ShellFDPipe(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+    JSObject * arrayObj = JS_NewArrayObject(cx, 2, NULL);
+    PRFileDesc * in[2];
+    int r = PR_CreatePipe(&in[0], &in[1]);
+    jsval jsv1, jsv2;
+    jsv1 = POINTER_TO_JSVAL(cx, in[0]);
+    jsv2 = POINTER_TO_JSVAL(cx, in[1]);
+    JS_SetElement(cx, arrayObj, 0, &jsv1);
+    JS_SetElement(cx, arrayObj, 1, &jsv2);
+    JS_ReturnValue(OBJECT_TO_JSVAL(arrayObj));
+}
+
+static JSBool ShellFDSeek(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+    /*
+        2 args: fd, absolute-position
+        3 args: fd, destination, boolean forward
+    */
+
+    if (argc != 3 && argc != 2) {
+		JS_ReturnException("this procedure requires three parameters: FILEDESC, COUNT[, BOOLEAN]");
+    }
+
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+    PRFileDesc * pfd = pd->p;
+    int r, count = JSVAL_TO_INT(argv[1]);
+
+    if (argc == 2) {
+        r = PR_Seek(pfd, count, PR_SEEK_SET);
+    }
+
+    bool forward = JSVAL_TO_BOOLEAN(argv[2]);
+
+    if (forward) {
+        r = PR_Seek(pfd, count, PR_SEEK_CUR);
+    } else {
+        r = PR_Seek(pfd, count, PR_SEEK_END);
+    }
+
+    JS_ReturnValue(INT_TO_JSVAL(r));
+
+}
+
+static JSBool ShellFDWriteBytes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+    if (argc != 3) {
+		JS_ReturnException("this procedure requires three parameters: FILEDESC, ARRAY, COUNT");
+    }
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+    PRFileDesc * pfd = pd->p;
+    PointerData * buffer = JSVAL_TO_POINTER(cx, argv[1]);
+    int count = JSVAL_TO_INT(argv[2]);
+    int r = PR_Write(pfd, buffer->p, count);
+    JS_ReturnValue(INT_TO_JSVAL(r));
+}
+
+static JSBool ShellFDReadBytes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (argc != 3) {
+		JS_ReturnException("this procedure requires three parameters: FILEDESC, BUFFER, COUNT");
+    }
+
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+    PRFileDesc * pfd = pd->p;
+
+    PointerData * buffer = JSVAL_TO_POINTER(cx, argv[1]);
+    int count = JSVAL_TO_INT(argv[2]);
+
+    int r = PR_Read(pfd, buffer->p, count);
+
+    JS_ReturnValue(INT_TO_JSVAL(r));
+
+}
+
+static JSBool ShellFDBytes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (argc != 1) {
+		JS_ReturnException("this procedure requires one parameter: FILEDESC");
+    }
+
+    PRFileDesc * pfd = JSVAL_TO_POINTER(cx, argv[0]);
+
+      int r = PR_Available(pfd);
+
+    JS_ReturnValue(INT_TO_JSVAL(r));
+
+}
+
+static JSBool ShellFDSync(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (argc != 1) {
+		JS_ReturnException("this procedure requires one parameter: FILEDESC");
+    }
+
+    PRFileDesc * pfd = JSVAL_TO_POINTER(cx, argv[0]);
+    int r = PR_Sync(pfd);
+
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(r == PR_SUCCESS));
+
+}
+
+static JSBool ShellFDClose(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (argc != 1) {
+		JS_ReturnException("this procedure requires one parameter: FILEDESC");
+    }
+
+    PRFileDesc * pfd = JSVAL_TO_POINTER(cx, argv[0]);
+    int r = PR_Close(pfd);
+
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(r == PR_SUCCESS));
+
+}
+
+static JSBool ShellFDOpenFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+    if (argc < 2) {
+		JS_ReturnException("this procedure requires two parameters: PATH, SPEC; where SPEC: r[ead]w[rite]c[reate]");
+    }
+
+    int DEFAULT_MODE_FLAGS = PR_IRUSR | PR_IWUSR | PR_IWGRP | PR_IRGRP | PR_IROTH;
+    // Number Shell.fd.openFile(PATH, SPEC)
+    /*
+        Where SPEC: [r][w][c]
+        where r = read
+        where w = write
+        where c = create
+    */
+    char * string[2];
+
+	string[0] = JS_ValueToNativeString(cx, argv[0]);
+    string[1] = JS_ValueToNativeString(cx, argv[1]);
+
+    int flags = 0;
+
+	if (!string[0]) {
+		JS_ReturnException("failed to get file name from javascript");
+	}
+
+	if (!string[1]) {
+        JS_ReturnException("failed to get file access flags from javascript");
+	}
+
+    int i = 0, r = 0, w = 0, c = 0, a = 0;
+    while ((c = string[1][i++])) {
+        switch (c) {
+            case 'r': r = 1; 
+            break;
+            case 'w': w = 1;
+            break;
+            case 'c': c = 1;
+            break;
+            case 'a': a = 1;
+            default:
+            JS_ReturnCustomException("wrong file access request in character: %c; expected r, w, a, and or c; in any order", c);
+        }
+    }
+
+    if (c) flags = PR_CREATE_FILE;
+    if (r && (w || a)) flags |= PR_RDWR;
+    else {
+        if (r) flags |= PR_RDONLY;
+        if (w) flags |= PR_WRONLY;
+        if (a) flags |= PR_APPEND;
+    }
+
+    void * p = PR_Open(string[0], flags, 
+        (c) ? // create mode, yes so use the int value int param 3 if it exists
+        JSVAL_TO_INT((argc == 3)?argv[2]:DEFAULT_MODE_FLAGS):
+        DEFAULT_MODE_FLAGS
+    );
+
+    JSObject * ptr = JSNewPointer(cx, p);
+    PointerData * pd = JS_GetPrivate(cx, ptr);
+    pd->size = 1; pd->length = sizeof(PRFileDesc);
+    pd->isStruct = true;
+
+	JS_ReturnValue(OBJECT_TO_JSVAL(ptr));
+
 }
 
 bool buffer_ends_with_newline(register char * buffer, int length) {
@@ -1243,17 +1678,18 @@ static JSBool ShellEchoError(JSContext *cx, JSObject *obj, uintN argc, jsval *ar
 	bool have_newline = false;
 
 	for (i = 0; i < argc; i++) {
-		bytes = JS_ValueToNativeString(cx, argv[i]);
+		bytes = JS_EncodeString(cx, JS_ValueToString(cx, argv[i]));
 		if (! bytes) continue;
 		fprintf(stderr, "%s%s", i ? " " : "", bytes);
 		if (i == argFinal) have_newline = buffer_ends_with_newline(bytes, 0);
-		JS_FreeNativeString(cx, bytes);
+		JS_free(cx, bytes);
 	}
 
 	if (!have_newline) putc('\n', stderr);
 	fflush(stderr);
 
 	JS_ReturnValue(JSVAL_VOID);
+
 }
 
 static JSBool ShellEcho(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
@@ -1263,11 +1699,11 @@ static JSBool ShellEcho(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 	char *bytes;
 	bool have_newline = false;
 	for (i = 0; i < argc; i++) {
-		bytes = JS_ValueToNativeString(cx, argv[i]);
+		bytes = JS_EncodeString(cx, JS_ValueToString(cx, argv[i]));
 		if (! bytes) continue;
 		printf("%s%s", i ? " " : "", bytes);
 		if (i == argFinal) have_newline = buffer_ends_with_newline(bytes, 0);
-		JS_FreeNativeString(cx, bytes);
+		JS_free(cx, bytes);
 	}
 
 	if (!have_newline) putc('\n', stdout); 
@@ -1282,10 +1718,10 @@ static JSBool ShellPrint(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
 
 	char *bytes; uintn i;
 	for (i = 0; i < argc; i++) {
-		bytes = JS_ValueToNativeString(cx, argv[i]);
+		bytes = JS_EncodeString(cx, JS_ValueToString(cx, argv[i]));
 		if (! bytes) continue;
 		printf("%s", bytes);
-		JS_FreeNativeString(cx, bytes);
+		JS_free(cx, bytes);
 	}
 	
 	fflush(stdout);
@@ -1298,10 +1734,10 @@ static JSBool ShellPrintError(JSContext *cx, JSObject *obj, uintN argc, jsval *a
 	uintN i;
 	char *bytes;
 	for (i = 0; i < argc; i++) {
-		bytes = JS_ValueToNativeString(cx, argv[i]);
+		bytes = JS_EncodeString(cx, JS_ValueToString(cx, argv[i]));
 		if (! bytes) continue;
 		fprintf(stderr, "%s", bytes);
-		JS_FreeNativeString(cx, bytes);
+		JS_free(cx, bytes);
 	}
 	fflush(stdout);
 	JS_ReturnValue(JSVAL_VOID);
@@ -1325,6 +1761,278 @@ static JSBool ShellExit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 
 }
 
+static JSBool ShellBuffer(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (!argc) {
+        JS_ReturnCustomException("failed to allocate %i bytes for buffer", 0);
+    }
+
+    if (argc != 2) {
+        JS_ReturnCustomException("expected 2 parameters: SIZE, LENGTH; have: %i", argc);
+    }
+
+    long size = JSVAL_TO_INT(argv[0]);
+    long count = JSVAL_TO_INT(argv[1]);
+    long bytes = size * count;
+    void * buffer = JS_malloc(cx, bytes);
+
+    if (!buffer) {
+        JS_ReturnCustomException("failed to allocate %i bytes for buffer", bytes);
+    }
+
+    JSObject * ptr = JSNewPointer(cx, buffer);
+    PointerData * pd = JS_GetPrivate(cx, ptr);
+    pd->size = size;
+    pd->length = count;
+    pd->bytes = bytes;
+    
+    JS_ReturnValue(OBJECT_TO_JSVAL(ptr));
+
+}
+
+static JSBool ShellBufferResize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (!argc) {
+        JS_ReturnCustomException("failed to allocate %i bytes for buffer", 0);
+    }
+
+    if (argc != 3) {
+        JS_ReturnCustomException("expected 3 parameters: BUFFER, SIZE, LENGTH; have: %i", argc);
+    }
+
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+
+    void * buffer = pd->p;
+    long size = JSVAL_TO_INT(argv[1]);
+    long count = JSVAL_TO_INT(argv[2]);
+    long bytes = size * count;
+    buffer = JS_realloc(cx, buffer, bytes);
+
+    if (!buffer) {
+        JS_free(cx, pd->p); pd->p = NULL;
+        JS_ReturnCustomException("failed to change buffer span to %i", bytes);
+    }
+
+    pd->p = buffer;
+    pd->size = size;
+    pd->length = count;
+    pd->bytes = bytes;
+    
+    JS_ReturnValue(argv[0]);
+
+}
+
+/*
+static JSBool ShellBufferPaste(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+    jsval jsv;
+    JSObject * oBufferWrite = JSVAL_TO_OBJECT(argv[0]);
+    JS_GetProperty(cx, oBufferWrite, "size", &jsv);
+    long pBufferSize = JSVAL_TO_INT(jsv);
+
+    JS_GetProperty(cx, oBufferWrite, "length", &jsv);
+    long pBufferLength = JSVAL_TO_INT(jsv);
+
+    long pBufferBytes = pBufferSize * pBufferLength;
+
+    long start = JSVAL_TO_INT(argv[1]);
+    long length = JSVAL_TO_INT(argv[2]);
+    
+    JSObject * oBufferSource = JSVAL_TO_OBJECT(argv[0]);
+
+    if (JS_IsArrayObject(cx, oBufferSource)) {
+        uint i = 0, m = 0;
+        JS_GetArrayLength(cx, oBufferSource, &m);
+        if (length > m) length = m;
+        if (length > pBufferLength - start) length = pBufferLength - start;
+        switch (pBufferSize) {
+            case 1: {
+                char * buffer = JS_GetPrivate(cx, oBufferWrite);
+                for (; start < length; start++) {
+                    JS_GetElement(cx, oBufferSource, i++, &jsv);
+                    buffer[start] = JSVAL_TO_INT(jsv);
+                }
+                break;
+            }
+            case 2: {
+                short * buffer = JS_GetPrivate(cx, oBufferWrite);
+                for (; start < length; start++) {
+                    JS_GetElement(cx, oBufferSource, i++, &jsv);
+                    buffer[start] = JSVAL_TO_INT(jsv);
+                }
+                break;
+            }
+            case 4: {
+                bool isFloat = false;
+                JS_GetProperty(cx, oBufferWrite, "float32", &jsv);
+                isFloat = JSVAL_TO_BOOLEAN(jsv);
+                if (isFloat) {
+                    float32 * buffer = JS_GetPrivate(cx, oBufferWrite);
+                    for (; start < length; start++) {
+                        JS_GetElement(cx, oBufferSource, i++, &jsv);
+                        buffer[start] = *JSVAL_TO_DOUBLE(jsv);
+                    }
+                } else {
+                    int32_t * buffer = JS_GetPrivate(cx, oBufferWrite);
+                    for (; start < length; start++) {
+                        JS_GetElement(cx, oBufferSource, i++, &jsv);
+                        buffer[start] = JSVAL_TO_INT(jsv);
+                    }
+                }
+                break;
+            }
+            case 8: {
+                bool isDouble = false;
+                JS_GetProperty(cx, oBufferWrite, "double", &jsv);
+                isDouble = JSVAL_TO_BOOLEAN(jsv);
+                bool isFloat = false;
+                JS_GetProperty(cx, oBufferWrite, "float64", &jsv);
+                isFloat = JSVAL_TO_BOOLEAN(jsv);
+                if (isDouble) {
+                    double * buffer = JS_GetPrivate(cx, oBufferWrite);
+                    for (; start < length; start++) {
+                        JS_GetElement(cx, oBufferSource, i++, &jsv);
+                        buffer[start] = *JSVAL_TO_DOUBLE(jsv);
+                    }
+                } else if (isFloat) {
+                    float64 * buffer = JS_GetPrivate(cx, oBufferWrite);
+                    for (; start < length; start++) {
+                        JS_GetElement(cx, oBufferSource, i++, &jsv);
+                        buffer[start] = *JSVAL_TO_DOUBLE(jsv);
+                    }
+                }
+                else {
+                    int64_t * buffer = JS_GetPrivate(cx, oBufferWrite);
+                    for (; start < length; start++) {
+                        JS_GetElement(cx, oBufferSource, i++, &jsv);
+                        buffer[start] = *JSVAL_TO_DOUBLE(jsv);
+                    }
+                }
+                break;
+            }
+            default: {
+                JS_ReturnException("invalid type size: %i", NULL, pBufferSize);
+            }
+        }
+    } else {
+        void * source = JS_GetPrivate(cx, oBufferSource);
+        long sLength = 0;
+        JS_GetProperty(cx, oBufferSource, "length", &jsv);
+        sLength = *JSVAL_TO_DOUBLE(jsv);
+        if (length > sLength) length = sLength;
+        if (length > pBufferLength - start) length = pBufferLength - start;
+        long bytes = length * pBufferSize;
+        memcpy(JS_GetPrivate(cx, oBufferWrite) + (start * pBufferSize), source, bytes);
+    }
+
+    JS_ReturnValue(argv[2]);
+
+}
+*/
+
+/*
+static JSBool ShellBufferCut(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (!argc) {
+        JS_ReturnException("failed to cut %i bytes for from no buffer", 0);
+    }
+
+    if (argc != 3) {
+        JS_ReturnException("expected 3 parameters: BUFFER, START, LENGTH; have: %i", argc);
+    }
+
+    JSObject * oBuffer = JSVAL_TO_OBJECT(argv[0]);
+    jsval jsv = JS_FALSE;
+    void * pBuffer = JSVAL_TO_POINTER(cx, argv[0]);
+ 
+    JS_GetProperty(cx, oBuffer, "size", &jsv);
+    long pBufferSize = JSVAL_TO_INT(jsv);
+
+    JS_GetProperty(cx, oBuffer, "length", &jsv);
+    long pBufferLength = JSVAL_TO_INT(jsv);
+
+    long pBufferBytes = pBufferSize * pBufferLength;
+
+    long start = JSVAL_TO_INT(argv[1]);
+    long count = JSVAL_TO_INT(argv[2]);
+    long bytes = pBufferSize * count;
+
+    void * destination = JS_malloc(cx, bytes);
+
+    if (!destination) {
+        JS_ReturnException("failed to cut %i bytes to buffer", bytes);
+    }
+
+    memcpy(destination, pBuffer + (start * pBufferSize), bytes);
+
+    JSObject * ptr = JSNewPointer(cx, destination);
+
+    JS_DefineProperty(cx, ptr, "size", pBufferSize, NULL, NULL, JSPROP_ENUMERATE);
+    JS_DefineProperty(cx, ptr, "length", argv[2], NULL, NULL, JSPROP_ENUMERATE);
+    JS_DefineProperty(cx, ptr, "bytes", INT_TO_JSVAL(bytes), NULL, NULL, JSPROP_ENUMERATE);
+    
+    JS_ReturnValue(OBJECT_TO_JSVAL(ptr));
+
+}
+*/
+
+static JSBool ShellBufferFree(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (!argc) {
+        JS_ReturnException("failed to free no buffers");
+    }
+
+    int i = 0;
+
+    while (i < argc) {
+        PointerData * pd = JSVAL_TO_POINTER(cx, argv[i++]);
+        if (pd == NULL) {
+            JS_ReturnException("failed to get pointer header");
+        } else if (pd->p == NULL) {
+            JS_ReturnException("failed to free null pointer");
+        } else if (pd->isAllocated == false) {
+            char * pStr = JS_ValueToNativeString(cx, OBJECT_TO_JSVAL(obj));
+            JS_ReturnCustomException("failed fo free foreign pointer: %s", pStr);
+        }
+        JS_free(cx, pd->p);
+        pd->p = NULL;
+    }
+
+    JS_ReturnValue(JS_TRUE);
+
+}
+
+static JSBool ShellBufferClear(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+{
+
+    if (!argc) {
+        JS_ReturnException("failed to clear no buffers");
+    }
+
+    int i = 0;
+    
+    while (i < argc) {
+        JSObject * pObj = JSVAL_TO_OBJECT(argv[i++]);
+        PointerData * pd = JS_GetPrivate(cx, pObj);
+        if (!pd) {
+            JS_ReturnException("failed to get pointer header");
+        } else
+        if (!pd->p) {
+            JS_ReturnException("cannot write to null pointer");
+        } else if (pd->isReadOnly) {
+            JS_ReturnException("cannot write to read only pointer");
+        }
+        memset(pd->p, 0, pd->bytes);
+    }
+
+    JS_ReturnValue(JS_TRUE);
+
+}
+
 static JSFunctionSpec shell_functions[] = {
     JS_FS("Shell",      ShellSystem,           1, JSPROP_ENUMERATE,0),
     JS_FS("echo",         ShellEcho,           0, JSPROP_ENUMERATE,0),
@@ -1334,6 +2042,18 @@ static JSFunctionSpec shell_functions[] = {
     JS_FS("exit",         ShellExit,           0, JSPROP_ENUMERATE,0),
     JS_FS_END
 };
+
+JSBool ShellFDGetStandard(JSContext *cx, JSObject *obj, jsval id,
+                                 jsval *vp) {
+
+    switch (JSVAL_TO_INT(id)) {
+        case 0: JS_ReturnValue(POINTER_TO_JSVAL(cx, (PR_STDIN)));
+        case 1: JS_ReturnValue(POINTER_TO_JSVAL(cx, (PR_STDOUT)));
+        case 2: JS_ReturnValue(POINTER_TO_JSVAL(cx, (PR_STDERR)));
+        default: JS_ReturnValue(JS_FALSE);
+    }
+
+}
 
 JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
 
@@ -1358,7 +2078,35 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readFile", ShellGetFileContent, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "writeFile", ShellSetFileContent, 2, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "joinFile", ShellPrintFile, 2, JSPROP_ENUMERATE);
-    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "exit",              ShellExit, 0, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "exit", ShellExit, 0, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "buffer", ShellBuffer, 2, JSPROP_ENUMERATE);
+
+    jsval bufferFunction;
+    JS_GetProperty(cx, JSVAL_TO_OBJECT(fun), "buffer", &bufferFunction);
+    JSObject * bFunc = JSVAL_TO_OBJECT(bufferFunction);
+    JS_DefineFunction(cx, bFunc, "free", ShellBufferFree, 0, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, bFunc, "span", ShellBufferResize, 3, JSPROP_ENUMERATE); // realloc
+//    JS_DefineFunction(cx, bFunc, "slice", ShellBufferFree, 3, JSPROP_ENUMERATE); // convert to js
+//    JS_DefineFunction(cx, bFunc, "cut",   ShellBufferCut, 3, JSPROP_ENUMERATE);   // dup
+//    JS_DefineFunction(cx, bFunc, "paste", ShellBufferPaste, 3, JSPROP_ENUMERATE); // convert to native or use native and write
+    JS_DefineFunction(cx, bFunc, "clear", ShellBufferClear, 2, JSPROP_ENUMERATE); // value, erase...
+
+    JSObject * fd = JS_NewObject(cx, NULL, NULL, NULL);
+    JS_DefineProperty(cx, JSVAL_TO_OBJECT(fun), "fd", OBJECT_TO_JSVAL(fd), NULL, NULL, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "openFile", ShellFDOpenFile, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "sync", ShellFDSync, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "close", ShellFDClose, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "type", ShellFDType, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "properties", ShellFDProperties, 1, JSPROP_ENUMERATE);
+//    JS_DefineFunction(cx, fd, "std", ShellFDStd, 1, JSPROP_ENUMERATE);
+    JS_DefineElement(cx, fd, 0, 0, ShellFDGetStandard, NULL, JSPROP_ENUMERATE);
+    JS_DefineElement(cx, fd, 1, 0, ShellFDGetStandard, NULL, JSPROP_ENUMERATE);
+    JS_DefineElement(cx, fd, 2, 0, ShellFDGetStandard, NULL, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "bytes", ShellFDBytes, 1, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "read", ShellFDReadBytes, 3, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "write", ShellFDWriteBytes, 3, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "seek", ShellFDSeek, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, fd, "pipe", ShellFDPipe, 0, JSPROP_ENUMERATE);
 
     return JS_TRUE;
 

@@ -2,7 +2,14 @@
 
 /* global function Shell(cmd), parameter */
 
+x = Shell.buffer(8, 1);
+x.isDouble = true;
+x[0] = 10.1;
+x[1] = 4.1;
+echo(x[0]);
+exit(0);
 // Shell.source("/some/javascript/file.js")
+Shell.fd.read(Shell.fd[0], [], 2);
 
 Shell.writeFile('js.out', parameter.join(", ") + '\n');
 // Shell.joinFile(FILE, CONTENTS) // for append mode
@@ -29,6 +36,7 @@ Shell.writePipe('cat', Shell.readPipe('ls').output);
 
 echo("All properties of Function: Shell:", Object.keys(Shell).join(", "));
 echo("exiting...");
-exit(0);
+
+exit();
 
 echo("not reached");
