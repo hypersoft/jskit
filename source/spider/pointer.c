@@ -213,7 +213,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
             if (pd->flags.vtsigned) { register signed char * x = pd->p; jsv = DOUBLE_TO_JSVAL(x[index]); }
             else if (pd->flags.vtboolean) { register bool * x = pd->p; jsv = BOOLEAN_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
-                register char * x = pd->p; short buffer[] = {*x, 0};
+                register char * x = pd->p; short unsigned int buffer[] = {*x, 0};
                 jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
             }
             else { register unsigned char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
@@ -222,7 +222,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         case 2: {
             if (pd->flags.vtsigned) { register signed short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
-                register short * x = pd->p; short buffer[] = {*x, 0};
+                register short * x = pd->p; short unsigned int buffer[] = {*x, 0};
                 jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
             }
             else { register unsigned short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
@@ -232,7 +232,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
             if (pd->flags.vtfloat) { register float32 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             else if (pd->flags.vtsigned) { register int32_t * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
-                register uint32_t * x = pd->p; short buffer[] = {*x, 0};
+                register uint32_t * x = pd->p; short unsigned int buffer[] = {*x, 0};
                 jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
             }
             else { register uint32_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
@@ -243,7 +243,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
             else if (pd->flags.vtdouble) { register double * x = pd->p; JS_NewNumberValue(cx, x[index], &jsv); }
             else if (pd->flags.vtsigned) { register int64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             else if (pd->flags.vtutf) {
-                register uint64_t * x = pd->p; short buffer[] = {*x, 0};
+                register uint64_t * x = pd->p; short unsigned int buffer[] = {*x, 0};
                 jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
             }
             else { register uint64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
@@ -291,11 +291,12 @@ PointerClassResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObjec
     return JS_FALSE;
 }
 
+
 JSClass pointer_class = {
-    "pointer", JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE,
+    "pointer", JSCLASS_HAS_PRIVATE,
     JS_PropertyStub,  JS_PropertyStub,
     PointerClassGetPoint,  PointerClassSetPoint,
-    JS_EnumerateStub, PointerClassResolve,
+    JS_EnumerateStub, JS_ResolveStub,
     PointerClassConvert,   PointerClassFinalize,
     JSCLASS_NO_OPTIONAL_MEMBERS
 };

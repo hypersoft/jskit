@@ -2,12 +2,13 @@
 
 /* global function Shell(cmd), parameter */
 
-x = Shell.buffer(8, 1);
+x = Shell.buffer(8, 2);
 x.double = true;
 //echo("is double:", x.double);
 x[0] = 10.1;
+x[1] = 10.2;
 print(x[0], " = *((double *)", x.name, ")", '\n');
-for (k in x) echo(k)
+echo(Shell.buffer.slice(x));
 exit(0);
 // Shell.source("/some/javascript/file.js")
 Shell.fd.read(Shell.fd[0], [], 2);

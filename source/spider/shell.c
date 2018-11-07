@@ -759,160 +759,156 @@ static JSBool ShellBufferResize(JSContext *cx, JSObject *obj, uintN argc, jsval 
 
 }
 
-/*
-static JSBool ShellBufferPaste(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
-    jsval jsv;
-    JSObject * oBufferWrite = JSVAL_TO_OBJECT(argv[0]);
-    JS_GetProperty(cx, oBufferWrite, "size", &jsv);
-    long pBufferSize = JSVAL_TO_INT(jsv);
 
-    JS_GetProperty(cx, oBufferWrite, "length", &jsv);
-    long pBufferLength = JSVAL_TO_INT(jsv);
+    PointerData * pd = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[0]));
+    int begin = 0, end = pd->length;
 
-    long pBufferBytes = pBufferSize * pBufferLength;
-
-    long start = JSVAL_TO_INT(argv[1]);
-    long length = JSVAL_TO_INT(argv[2]);
-    
-    JSObject * oBufferSource = JSVAL_TO_OBJECT(argv[0]);
-
-    if (JS_IsArrayObject(cx, oBufferSource)) {
-        uint i = 0, m = 0;
-        JS_GetArrayLength(cx, oBufferSource, &m);
-        if (length > m) length = m;
-        if (length > pBufferLength - start) length = pBufferLength - start;
-        switch (pBufferSize) {
-            case 1: {
-                char * buffer = JS_GetPrivate(cx, oBufferWrite);
-                for (; start < length; start++) {
-                    JS_GetElement(cx, oBufferSource, i++, &jsv);
-                    buffer[start] = JSVAL_TO_INT(jsv);
-                }
-                break;
-            }
-            case 2: {
-                short * buffer = JS_GetPrivate(cx, oBufferWrite);
-                for (; start < length; start++) {
-                    JS_GetElement(cx, oBufferSource, i++, &jsv);
-                    buffer[start] = JSVAL_TO_INT(jsv);
-                }
-                break;
-            }
-            case 4: {
-                bool isFloat = false;
-                JS_GetProperty(cx, oBufferWrite, "float32", &jsv);
-                isFloat = JSVAL_TO_BOOLEAN(jsv);
-                if (isFloat) {
-                    float32 * buffer = JS_GetPrivate(cx, oBufferWrite);
-                    for (; start < length; start++) {
-                        JS_GetElement(cx, oBufferSource, i++, &jsv);
-                        buffer[start] = *JSVAL_TO_DOUBLE(jsv);
-                    }
-                } else {
-                    int32_t * buffer = JS_GetPrivate(cx, oBufferWrite);
-                    for (; start < length; start++) {
-                        JS_GetElement(cx, oBufferSource, i++, &jsv);
-                        buffer[start] = JSVAL_TO_INT(jsv);
-                    }
-                }
-                break;
-            }
-            case 8: {
-                bool isDouble = false;
-                JS_GetProperty(cx, oBufferWrite, "double", &jsv);
-                isDouble = JSVAL_TO_BOOLEAN(jsv);
-                bool isFloat = false;
-                JS_GetProperty(cx, oBufferWrite, "float64", &jsv);
-                isFloat = JSVAL_TO_BOOLEAN(jsv);
-                if (isDouble) {
-                    double * buffer = JS_GetPrivate(cx, oBufferWrite);
-                    for (; start < length; start++) {
-                        JS_GetElement(cx, oBufferSource, i++, &jsv);
-                        buffer[start] = *JSVAL_TO_DOUBLE(jsv);
-                    }
-                } else if (isFloat) {
-                    float64 * buffer = JS_GetPrivate(cx, oBufferWrite);
-                    for (; start < length; start++) {
-                        JS_GetElement(cx, oBufferSource, i++, &jsv);
-                        buffer[start] = *JSVAL_TO_DOUBLE(jsv);
-                    }
-                }
-                else {
-                    int64_t * buffer = JS_GetPrivate(cx, oBufferWrite);
-                    for (; start < length; start++) {
-                        JS_GetElement(cx, oBufferSource, i++, &jsv);
-                        buffer[start] = *JSVAL_TO_DOUBLE(jsv);
-                    }
-                }
-                break;
-            }
-            default: {
-                JS_ReturnException("invalid type size: %i", NULL, pBufferSize);
-            }
+    if (argc > 1) {
+        begin = JSVAL_TO_INT(argv[1]);
+        if (begin < 0) {
+            begin = pd->length + begin;
         }
-    } else {
-        void * source = JS_GetPrivate(cx, oBufferSource);
-        long sLength = 0;
-        JS_GetProperty(cx, oBufferSource, "length", &jsv);
-        sLength = *JSVAL_TO_DOUBLE(jsv);
-        if (length > sLength) length = sLength;
-        if (length > pBufferLength - start) length = pBufferLength - start;
-        long bytes = length * pBufferSize;
-        memcpy(JS_GetPrivate(cx, oBufferWrite) + (start * pBufferSize), source, bytes);
+    }
+    if (argc > 2) {
+        end = JSVAL_TO_INT(argv[2]);
+        if (end < 0) {
+            end = pd->length + end;
+        }
     }
 
-    JS_ReturnValueWithGC(argv[2]);
+    int length = end - begin;
+
+    if (length < 0) length = end = begin = 0;
+
+    JSObject * out = JS_NewArrayObject(cx, length, NULL);
+    jsval jsv;
+
+    int destIndex, index = begin;
+
+    if (length) switch (pd->size) {
+        case 1: {
+            if (pd->flags.vtsigned) {
+                register signed char * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    jsv = INT_TO_JSVAL(x[index]);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            else if (pd->flags.vtboolean) {
+                register bool * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    jsv = BOOLEAN_TO_JSVAL(x[index]);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            else if (pd->flags.vtutf) {
+                register char * x = pd->p; short unsigned int buffer[end];
+                for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
+                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCString(cx, buffer, end)));
+            }
+            else { 
+                register unsigned char * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    jsv = INT_TO_JSVAL(x[index]);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            break;
+        }
+        case 2: {
+            if (pd->flags.vtsigned) { 
+                register signed short * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    jsv = DOUBLE_TO_JSVAL(x[index]);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            else if (pd->flags.vtutf) {
+                register short * x = pd->p; short unsigned int buffer[end];
+                for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
+                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCString(cx, buffer, end)));
+            }
+            else { 
+                register unsigned short * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    jsv = INT_TO_JSVAL(x[index]);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            break;
+        }
+        case 4: {
+            if (pd->flags.vtfloat) { 
+                register float32 * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    JS_NewNumberValue(cx, (double) x[index], &jsv);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            else if (pd->flags.vtsigned) {
+                register int32_t * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    jsv = INT_TO_JSVAL(x[index]);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            else if (pd->flags.vtutf) {
+                register uint32_t * x = pd->p; short unsigned int buffer[end];
+                for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
+                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCString(cx, buffer, end)));
+            }
+            else { 
+                register uint32_t * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    JS_NewNumberValue(cx, (double) x[index], &jsv);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            break;
+        }
+        case 8: {
+            if (pd->flags.vtfloat) { 
+                register float64 * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    JS_NewNumberValue(cx, (double) x[index], &jsv);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            else if (pd->flags.vtdouble) {
+                register double * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    JS_NewNumberValue(cx, x[index], &jsv);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            else if (pd->flags.vtsigned) {
+                register int64_t * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    JS_NewNumberValue(cx, (double) x[index], &jsv);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            else if (pd->flags.vtutf) {
+                register uint64_t * x = pd->p; short unsigned int buffer[end];
+                for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
+                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCString(cx, buffer, end)));
+            }
+            else { register uint64_t * x = pd->p;
+                for (destIndex = 0; destIndex < end; destIndex++, index++) {
+                    JS_NewNumberValue(cx, (double) x[index], &jsv);
+                    JS_SetElement(cx, out, destIndex, &jsv);
+                }
+            }
+            break;
+        }
+        default: { JS_ReturnCustomException("invalid pointer type size: %i", pd->size); }
+    }
+
+    JS_ReturnValue(OBJECT_TO_JSVAL(out));
 
 }
-*/
-
-/*
-static JSBool ShellBufferCut(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
-{
-
-    if (!argc) {
-        JS_ReturnException("failed to cut %i bytes for from no buffer", 0);
-    }
-
-    if (argc != 3) {
-        JS_ReturnException("expected 3 parameters: BUFFER, START, LENGTH; have: %i", argc);
-    }
-
-    JSObject * oBuffer = JSVAL_TO_OBJECT(argv[0]);
-    jsval jsv = JS_FALSE;
-    void * pBuffer = JSVAL_TO_POINTER(cx, argv[0]);
- 
-    JS_GetProperty(cx, oBuffer, "size", &jsv);
-    long pBufferSize = JSVAL_TO_INT(jsv);
-
-    JS_GetProperty(cx, oBuffer, "length", &jsv);
-    long pBufferLength = JSVAL_TO_INT(jsv);
-
-    long pBufferBytes = pBufferSize * pBufferLength;
-
-    long start = JSVAL_TO_INT(argv[1]);
-    long count = JSVAL_TO_INT(argv[2]);
-    long bytes = pBufferSize * count;
-
-    void * destination = JS_malloc(cx, bytes);
-
-    if (!destination) {
-        JS_ReturnException("failed to cut %i bytes to buffer", bytes);
-    }
-
-    memcpy(destination, pBuffer + (start * pBufferSize), bytes);
-
-    JSObject * ptr = JSNewPointer(cx, destination);
-
-    JS_DefineProperty(cx, ptr, "size", pBufferSize, NULL, NULL, JSPROP_ENUMERATE);
-    JS_DefineProperty(cx, ptr, "length", argv[2], NULL, NULL, JSPROP_ENUMERATE);
-    JS_DefineProperty(cx, ptr, "bytes", INT_TO_JSVAL(bytes), NULL, NULL, JSPROP_ENUMERATE);
-    
-    JS_ReturnValueWithGC(OBJECT_TO_JSVAL(ptr));
-
-}
-*/
 
 static JSBool ShellBufferFree(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
@@ -1022,9 +1018,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JSObject * bFunc = JSVAL_TO_OBJECT(bufferFunction);
     JS_DefineFunction(cx, bFunc, "free", ShellBufferFree, 0, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, bFunc, "span", ShellBufferResize, 3, JSPROP_ENUMERATE); // realloc
-//    JS_DefineFunction(cx, bFunc, "slice", ShellBufferFree, 3, JSPROP_ENUMERATE); // convert to js
-//    JS_DefineFunction(cx, bFunc, "cut",   ShellBufferCut, 3, JSPROP_ENUMERATE);   // dup
-//    JS_DefineFunction(cx, bFunc, "paste", ShellBufferPaste, 3, JSPROP_ENUMERATE); // convert to native or use native and write
+    JS_DefineFunction(cx, bFunc, "slice", ShellBufferSlice, 3, JSPROP_ENUMERATE); // convert to js
     JS_DefineFunction(cx, bFunc, "clear", ShellBufferClear, 2, JSPROP_ENUMERATE); // value, erase...
 
     JSObject * fd = JS_NewObject(cx, NULL, NULL, NULL);
