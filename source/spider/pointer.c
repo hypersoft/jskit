@@ -197,7 +197,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     /* for */ jsval jsv; switch (pd->size) {
         case 1: {
             if (pd->flags.vtsigned) { register signed char * x = pd->p; jsv = DOUBLE_TO_JSVAL(x[index]); }
-            else if (pd->flags.vtboolean) { register bool * x = pd->p; jsv = BOOL_TO_JSVAL(x[index]); }
+            else if (pd->flags.vtboolean) { register bool * x = pd->p; jsv = BOOLEAN_TO_JSVAL(x[index]); }
             else { register unsigned char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             break;
         }

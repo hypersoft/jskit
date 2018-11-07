@@ -2,10 +2,10 @@
 
 /* global function Shell(cmd), parameter */
 
-x = Shell.buffer(8, 1);
-x.double = true;
+x = Shell.buffer(1, 1);
+x.boolean = true;
 x[0] = 10.1;
-echo(x);
+echo(x[0]);
 exit(0);
 // Shell.source("/some/javascript/file.js")
 Shell.fd.read(Shell.fd[0], [], 2);
