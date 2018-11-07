@@ -759,7 +759,7 @@ static JSBool ShellBufferResize(JSContext *cx, JSObject *obj, uintN argc, jsval 
 
 }
 
-static JSBool ShellBufferCut(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
+static JSBool ShellBufferCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 
     PointerData * pd = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[0]));
@@ -1056,7 +1056,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
     JS_DefineFunction(cx, bFunc, "free", ShellBufferFree, 0, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, bFunc, "span", ShellBufferResize, 3, JSPROP_ENUMERATE); // realloc
     JS_DefineFunction(cx, bFunc, "slice", ShellBufferSlice, 3, JSPROP_ENUMERATE); // convert to js
-    JS_DefineFunction(cx, bFunc, "cut", ShellBufferCut, 3, JSPROP_ENUMERATE); // memdup as slice
+    JS_DefineFunction(cx, bFunc, "copy", ShellBufferCopy, 3, JSPROP_ENUMERATE); // memdup as slice
     JS_DefineFunction(cx, bFunc, "clear", ShellBufferClear, 2, JSPROP_ENUMERATE); // value, erase...
 
     JSObject * fd = JS_NewObject(cx, NULL, NULL, NULL);
