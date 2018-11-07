@@ -18,8 +18,7 @@ PROJECT_DEFINES = \
 	JS_THREADSAFE
 
 ifeq (true,$(DEBUGGING))
-DEBUG_FLAGS = -g3
-PROJECT_DEFINES += DEBUG
+DEBUG_FLAGS = -g3 -DDEBUG
 BUILD_STRIP_SPIDER = : debug-build not stripped
 else
 BUILD_STRIP_SPIDER = strip dist/bin/$(shell basename $(BUILD_SPIDER_PROGRAM))
