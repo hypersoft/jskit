@@ -373,7 +373,8 @@ static JSBool ShellSystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 static JSBool ShellFDProperties(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 
-	PRFileDesc * filename = JSVAL_TO_POINTER(cx, argv[0]);
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+    PRFileDesc * filename = pd->p;
 
 	if (!filename) {
 		JS_ReturnException("can't convert file name to string");
@@ -494,7 +495,8 @@ static JSBool ShellFDBytes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
 		JS_ReturnException("this procedure requires one parameter: FILEDESC");
     }
 
-    PRFileDesc * pfd = JSVAL_TO_POINTER(cx, argv[0]);
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+    PRFileDesc * pfd = pd->p;
 
       int r = PR_Available(pfd);
 
@@ -509,7 +511,8 @@ static JSBool ShellFDSync(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 		JS_ReturnException("this procedure requires one parameter: FILEDESC");
     }
 
-    PRFileDesc * pfd = JSVAL_TO_POINTER(cx, argv[0]);
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+    PRFileDesc * pfd = pd->p;
     int r = PR_Sync(pfd);
 
     JS_ReturnValue(BOOLEAN_TO_JSVAL(r == PR_SUCCESS));
@@ -523,7 +526,8 @@ static JSBool ShellFDClose(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
 		JS_ReturnException("this procedure requires one parameter: FILEDESC");
     }
 
-    PRFileDesc * pfd = JSVAL_TO_POINTER(cx, argv[0]);
+    PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
+    PRFileDesc * pfd = pd->p;
     int r = PR_Close(pfd);
 
     JS_ReturnValue(BOOLEAN_TO_JSVAL(r == PR_SUCCESS));
