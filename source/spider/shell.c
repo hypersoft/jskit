@@ -847,7 +847,7 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
             else if (pd->flags.vtutf) {
                 register char * x = pd->p; short unsigned int buffer[end];
                 for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
-                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCString(cx, buffer, end)));
+                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, end)));
             }
             else { 
                 register unsigned char * x = pd->p;
@@ -869,7 +869,7 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
             else if (pd->flags.vtutf) {
                 register short * x = pd->p; short unsigned int buffer[end];
                 for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
-                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCString(cx, buffer, end)));
+                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, end)));
             }
             else { 
                 register unsigned short * x = pd->p;
@@ -898,7 +898,7 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
             else if (pd->flags.vtutf) {
                 register uint32_t * x = pd->p; short unsigned int buffer[end];
                 for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
-                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCString(cx, buffer, end)));
+                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, end)));
             }
             else { 
                 register uint32_t * x = pd->p;
@@ -934,7 +934,7 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
             else if (pd->flags.vtutf) {
                 register uint64_t * x = pd->p; short unsigned int buffer[end];
                 for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
-                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCString(cx, buffer, end)));
+                JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, end)));
             }
             else { register uint64_t * x = pd->p;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {

@@ -2,19 +2,27 @@
 
 /* global function Shell(cmd), parameter */
 
-x = Shell.buffer(8, 2);
+var x = Shell.buffer(8, 2);
 x.double = true;
-//echo("is double:", x.double);
 x[0] = 10.1;
 x[1] = 10.2;
 print(x[0], " = *((double *)", x.name, ")", '\n');
-echo(Shell.buffer.slice(x));
-echo(Shell.buffer.copy(x)[1]);
-exit(0);
-// Shell.source("/some/javascript/file.js")
-Shell.fd.read(Shell.fd[0], [], 2);
 
-Shell.writeFile('js.out', parameter.join(", ") + '\n');
+var bytesWritten = Shell.writeFile('js.out', parameter.join(", ") + '\n');
+
+// Shell.source("/some/javascript/file.js")
+var chars = Shell.buffer(1, bytesWritten);
+chars.utf = true;
+var fileptr = Shell.fd.openFile('js.out', 'r');
+Shell.fd.read(fileptr, chars, chars.length);
+Shell.fd.close(fileptr);
+Shell.fd.write(Shell.fd[1], chars, chars.length);
+echo();
+echo(Shell.buffer.slice(chars));
+
+//echo(Shell.buffer.slice(chars));
+
+exit();
 // Shell.joinFile(FILE, CONTENTS) // for append mode
 
 var fileContent = Shell.readFile('js.out');

@@ -218,7 +218,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
             else if (pd->flags.vtboolean) { register bool * x = pd->p; jsv = BOOLEAN_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
                 register char * x = pd->p; short unsigned int buffer[] = {*x, 0};
-                jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
+                jsv = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, 1));
             }
             else { register unsigned char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             break;
@@ -227,7 +227,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
             if (pd->flags.vtsigned) { register signed short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
                 register short * x = pd->p; short unsigned int buffer[] = {*x, 0};
-                jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
+                jsv = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, 1));
             }
             else { register unsigned short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             break;
@@ -237,7 +237,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
             else if (pd->flags.vtsigned) { register int32_t * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
                 register uint32_t * x = pd->p; short unsigned int buffer[] = {*x, 0};
-                jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
+                jsv = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, 1));
             }
             else { register uint32_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             break;
@@ -248,7 +248,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
             else if (pd->flags.vtsigned) { register int64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             else if (pd->flags.vtutf) {
                 register uint64_t * x = pd->p; short unsigned int buffer[] = {*x, 0};
-                jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
+                jsv = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, 1));
             }
             else { register uint64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             break;
