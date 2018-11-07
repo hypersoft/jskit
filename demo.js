@@ -22,7 +22,6 @@ echo(Shell.buffer.slice(chars));
 
 //echo(Shell.buffer.slice(chars));
 
-exit();
 // Shell.joinFile(FILE, CONTENTS) // for append mode
 
 var fileContent = Shell.readFile('js.out');
@@ -35,7 +34,9 @@ Shell.set('SCRIPT', parameter[0]);
 
 echo("environment variable:", Shell.get('SCRIPT'));
 Shell.clear('SCRIPT');
-echo(Shell.keys());
+
+// list all environment variables
+//echo(Shell.keys());
 
 if (Shell.get('notavar') !== null) {
 	echo("testing environment for empty value failed");

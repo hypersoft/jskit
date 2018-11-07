@@ -207,7 +207,7 @@ static JSBool ShellSetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 	fwrite(contents, 1, contentLength, file);
 	fclose(file);
 
-	JS_ReturnValueWithGC(DOUBLE_TO_JSVAL(contentLength));
+	JS_ReturnValueWithGC(INT_TO_JSVAL(contentLength));
 
 }
 
@@ -231,7 +231,7 @@ static JSBool ShellPrintFile(JSContext *cx, JSObject *obj, uintN argc, jsval *ar
 	fwrite(contents, 1, contentLength, file);
 	fclose(file);
 
-	JS_ReturnValueWithGC(DOUBLE_TO_JSVAL(contentLength));
+	JS_ReturnValueWithGC(INT_TO_JSVAL(contentLength));
 }
 
 static JSBool ShellGetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
@@ -862,7 +862,7 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
             if (pd->flags.vtsigned) { 
                 register signed short * x = pd->p;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
-                    jsv = DOUBLE_TO_JSVAL(x[index]);
+                    jsv = INT_TO_JSVAL(x[index]);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }

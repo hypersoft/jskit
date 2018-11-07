@@ -190,7 +190,11 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         }
         default: { JS_ReturnCustomException("invalid pointer type size: %i", pd->size); }
     }
-    JS_SetCallReturnValue2(cx, DOUBLE_TO_JSVAL(value));
+
+    jsval jsv;
+    JS_NewNumberValue(cx, value, &jsv);
+    JS_SetCallReturnValue2(cx, jsv);
+
     return JS_TRUE;
 }
 
@@ -214,7 +218,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
 
     /* for */ jsval jsv; switch (pd->size) {
         case 1: {
-            if (pd->flags.vtsigned) { register signed char * x = pd->p; jsv = DOUBLE_TO_JSVAL(x[index]); }
+            if (pd->flags.vtsigned) { register signed char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             else if (pd->flags.vtboolean) { register bool * x = pd->p; jsv = BOOLEAN_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
                 register char * x = pd->p; short unsigned int buffer[] = {*x, 0};
