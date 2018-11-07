@@ -292,7 +292,7 @@ JSObject * JSNewPointer(JSContext * cx, void * p) {
     *pd = NewPointerData(p);
     JSObject * out = JS_NewObject(cx, &pointer_class, NULL, NULL);
     JS_SetPrivate(cx, out, pd);
-    JS_DefineProperties(cx, out, &PointerProperties);
+    JS_DefineProperties(cx, out, PointerProperties);
     return out;
 }
 
