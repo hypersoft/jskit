@@ -954,10 +954,6 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
 static JSBool ShellBufferFree(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
 {
 
-    if (!argc) {
-        JS_ReturnException("failed to free no buffers");
-    }
-
     int i = 0;
 
     while (i < argc) {
