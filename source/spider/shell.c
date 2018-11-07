@@ -591,7 +591,6 @@ static JSBool ShellFDOpenFile(JSContext *cx, JSObject *obj, uintN argc, jsval *a
     JSObject * ptr = JSNewPointer(cx, p);
     PointerData * pd = JS_GetPrivate(cx, ptr);
     pd->size = 1; pd->length = sizeof(PRFileDesc);
-    pd->isStruct = true;
 
 	JS_ReturnValue(OBJECT_TO_JSVAL(ptr));
 
@@ -930,7 +929,7 @@ static JSBool ShellBufferFree(JSContext *cx, JSObject *obj, uintN argc, jsval *a
             JS_ReturnException("failed to get pointer header");
         } else if (pd->p == NULL) {
             JS_ReturnException("failed to free null pointer");
-        } else if (pd->isAllocated == false) {
+        } else if (pd->flags.allocated == false) {
             char * pStr = JS_ValueToNativeString(cx, OBJECT_TO_JSVAL(obj));
             JS_ReturnCustomException("failed fo free foreign pointer: %s", pStr);
         }
@@ -960,7 +959,7 @@ static JSBool ShellBufferClear(JSContext *cx, JSObject *obj, uintN argc, jsval *
         } else
         if (!pd->p) {
             JS_ReturnException("cannot write to null pointer");
-        } else if (pd->isReadOnly) {
+        } else if (pd->flags.readonly) {
             JS_ReturnException("cannot write to read only pointer");
         }
         memset(pd->p, 0, pd->bytes);

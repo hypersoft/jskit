@@ -3,7 +3,7 @@
 /* global function Shell(cmd), parameter */
 
 x = Shell.buffer(8, 1);
-x.isDouble = true;
+x.double = true;
 x[0] = 10.1;
 echo(x);
 exit(0);

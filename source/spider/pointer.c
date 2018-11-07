@@ -1,59 +1,146 @@
-
 typedef struct PtrClassData  {
     void *p;
     int size, length, bytes;
-    bool isDouble, isFloat, isSigned, isAllocated, isReadOnly, isString, isPointer, isStruct;
+    struct {
+        int garbage : 1;
+        int allocated : 1;
+        int readonly : 1;
+        int vtboolean : 1;
+        int vtfloat : 1;
+        int vtdouble : 1;
+        int vtsigned : 1;
+        int vtutf : 1;
+    } flags;
 } PointerData;
 
 PointerData NewPointerData(uintptr_t * p) {
-    return (PointerData) {p, 0, 0, 0, false, false, false, false, false, false, false, false};
+    PointerData out;
+    memset(&out, 0, sizeof(PointerData));
+    out.p = p;
+    return out;
+}
+
+JSBool PointerClassSetSize(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->size = JSVAL_TO_INT(*vp);
+    pd->bytes = pd->length * pd->size;
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetSize(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(INT_TO_JSVAL(pd->size));
+}
+
+JSBool PointerClassSetLength(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->length = JSVAL_TO_INT(*vp);
+    pd->bytes = pd->length * pd->size;
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetLength(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(INT_TO_JSVAL(pd->length));
+}
+
+JSBool PointerClassSetBytes(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    JS_ReturnException("trying to manually set byte length");
+}
+
+JSBool PointerClassGetBytes(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(INT_TO_JSVAL(pd->bytes));
+}
+
+JSBool PointerClassSetBoolean(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->flags.vtboolean = JSVAL_TO_BOOLEAN(*vp);
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetBoolean(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->flags.vtboolean));
+}
+
+JSBool PointerClassSetDouble(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->flags.vtdouble = JSVAL_TO_BOOLEAN(*vp);
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetDouble(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->flags.vtdouble));
+}
+
+JSBool PointerClassSetFloat(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->flags.vtfloat = JSVAL_TO_BOOLEAN(*vp);
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetFloat(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->flags.vtfloat));
+}
+
+JSBool PointerClassSetSigned(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->flags.vtsigned = JSVAL_TO_BOOLEAN(*vp);
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetSigned(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->flags.vtsigned));
+}
+
+JSBool PointerClassSetAllocated(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->flags.allocated = JSVAL_TO_BOOLEAN(*vp);
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetAllocated(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->flags.allocated));
+}
+
+JSBool PointerClassSetReadOnly(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->flags.readonly = JSVAL_TO_BOOLEAN(*vp);
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetReadOnly(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->flags.readonly));
+}
+
+JSBool PointerClassSetUtf(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    pd->flags.vtutf = JSVAL_TO_BOOLEAN(*vp);
+    JS_ReturnValue(JS_TRUE);
+}
+
+JSBool PointerClassGetUtf(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->flags.vtutf));
 }
 
 JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     PointerData * pd = JS_GetPrivate(cx, obj);
+
     if (JSVAL_IS_STRING(id)) {
         char * nid = JS_ValueToNativeString(cx, id);
-        if (strcmp(nid, "bytes") == 0) {
-            JS_ReturnException("trying to manually set byte length");
-        } else if (strcmp(nid, "size") == 0) {
-            pd->size = JSVAL_TO_INT(*vp);
-            pd->bytes = pd->length * pd->size;
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "length") == 0 ) {
-            pd->length = JSVAL_TO_INT(*vp);
-            pd->bytes = pd->length * pd->size;
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "isDouble") == 0) {
-            pd->isDouble = JSVAL_TO_BOOLEAN(*vp);
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "isFloat") == 0) {
-            pd->isFloat = JSVAL_TO_BOOLEAN(*vp);
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "isSigned") == 0) {
-            pd->isSigned = JSVAL_TO_BOOLEAN(*vp);
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "isAllocated") == 0) {
-            pd->isAllocated = JSVAL_TO_BOOLEAN(*vp);
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "isReadOnly") == 0) {
-            pd->isReadOnly = JSVAL_TO_BOOLEAN(*vp);
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "isString") == 0) {
-            pd->isString = JSVAL_TO_BOOLEAN(*vp);
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "isPointer") == 0) {
-            pd->isPointer = JSVAL_TO_BOOLEAN(*vp);
-            JS_ReturnValue(JS_TRUE);
-        } else if (strcmp(nid, "isStruct") == 0) {
-            pd->isStruct = JSVAL_TO_BOOLEAN(*vp);
-            JS_ReturnValue(JS_TRUE);
-        }
         JS_ReturnCustomException("invalid property set request: %s", nid);
     }
 
     if (pd->p == 0) {
         JS_ReturnException("cannot write null pointer");
-    } else if (pd->isReadOnly) {
+    } else if (pd->flags.readonly) {
         JS_ReturnException("cannot write data to read only pointer");
     }
 
@@ -74,13 +161,13 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         case 1: { register char * x = pd->p; x[index] = value; break; }
         case 2: { register short * x = pd->p; x[index] = value; break; }
         case 4: {
-            if (pd->isFloat) { register float32 * x = pd->p; x[index] = value; }
+            if (pd->flags.vtfloat) { register float32 * x = pd->p; x[index] = value; }
             else { register int32_t * x = pd->p; x[index] = value; }
             break;
         }
         case 8: {
-            if (pd->isFloat) { register float64 * x = pd->p; x[index] = value; }
-            else if (pd->isDouble) { register double * x = pd->p; x[index] = value; }
+            if (pd->flags.vtfloat) { register float64 * x = pd->p; x[index] = value; }
+            else if (pd->flags.vtdouble) { register double * x = pd->p; x[index] = value; }
             else { register int64_t * x = pd->p; x[index] = value; }
             break;
         }
@@ -91,42 +178,9 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
 
 JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     PointerData * pd = JS_GetPrivate(cx, obj);
+
     if (JSVAL_IS_STRING(id))  {
         char * nid = JS_ValueToNativeString(cx, id);
-        if (strcmp(nid, "bytes") == 0) {
-            jsval bytes = INT_TO_JSVAL(pd->bytes);
-            JS_ReturnValue(bytes);
-        } else if (strcmp(nid, "size") == 0) {
-            jsval bytes = INT_TO_JSVAL(pd->size);
-            JS_ReturnValue(bytes);
-        } else if (strcmp(nid, "length") == 0 ) {
-            jsval bytes = INT_TO_JSVAL(pd->length);
-            JS_ReturnValue(bytes);
-        } else if (strcmp(nid, "isDouble") == 0) {
-            jsval boolean = BOOLEAN_TO_JSVAL(pd->isDouble);
-            JS_ReturnValue(boolean);
-        } else if (strcmp(nid, "isFloat") == 0) {
-            jsval boolean = BOOLEAN_TO_JSVAL(pd->isFloat);
-            JS_ReturnValue(boolean);
-        } else if (strcmp(nid, "isSigned") == 0) {
-            jsval boolean = BOOLEAN_TO_JSVAL(pd->isSigned);
-            JS_ReturnValue(boolean);
-        } else if (strcmp(nid, "isAllocated") == 0) {
-            jsval boolean = BOOLEAN_TO_JSVAL(pd->isAllocated);
-            JS_ReturnValue(boolean);
-        } else if (strcmp(nid, "isReadOnly") == 0) {
-            jsval boolean = BOOLEAN_TO_JSVAL(pd->isReadOnly);
-            JS_ReturnValue(boolean);
-        } else if (strcmp(nid, "isString") == 0) {
-            jsval boolean = BOOLEAN_TO_JSVAL(pd->isString);
-            JS_ReturnValue(boolean);
-        } else if (strcmp(nid, "isPointer") == 0) {
-            jsval boolean = BOOLEAN_TO_JSVAL(pd->isPointer);
-            JS_ReturnValue(boolean);
-        } else if (strcmp(nid, "isStruct") == 0) {
-            jsval boolean = BOOLEAN_TO_JSVAL(pd->isStruct);
-            JS_ReturnValue(boolean);
-        }
         JS_ReturnCustomException("invalid property get request: %s", nid);
     }
 
@@ -140,25 +194,25 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
 
     /* for */ jsval jsv; switch (pd->size) {
         case 1: {
-            if (pd->isSigned) { register signed char * x = pd->p; jsv = DOUBLE_TO_JSVAL(x[index]); }
+            if (pd->flags.vtsigned) { register signed char * x = pd->p; jsv = DOUBLE_TO_JSVAL(x[index]); }
             else { register unsigned char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             break;
         }
         case 2: {
-            if (pd->isSigned) { register signed short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            if (pd->flags.vtsigned) { register signed short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             else { register unsigned short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             break;
         }
         case 4: {
-            if (pd->isFloat) { register float32 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
-            else if (pd->isSigned) { register int32_t * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            if (pd->flags.vtfloat) { register float32 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else if (pd->flags.vtsigned) { register int32_t * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             else { register uint32_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             break;
         }
         case 8: {
-            if (pd->isFloat) { register float64 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
-            else if (pd->isDouble) { register double * x = pd->p; JS_NewNumberValue(cx, x[index], &jsv); }
-            else if (pd->isSigned) { register int64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            if (pd->flags.vtfloat) { register float64 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else if (pd->flags.vtdouble) { register double * x = pd->p; JS_NewNumberValue(cx, x[index], &jsv); }
+            else if (pd->flags.vtsigned) { register int64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             else { register uint64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             break;
         }
@@ -170,7 +224,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
 void PointerClassFinalize(JSContext *cx, JSObject *obj) {
     PointerData * pd = JS_GetPrivate(cx, obj);
     if (pd) {
-        if (pd->p && pd->isAllocated) { JS_free(cx, pd->p); }
+        if (pd->p && pd->flags.allocated) { JS_free(cx, pd->p); }
         JS_free(cx, pd);
     }
 }
@@ -209,19 +263,40 @@ JSClass pointer_class = {
     JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
+static JSPropertySpec PointerProperties[] = {
+    {"size",   -1,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetSize,    PointerClassSetSize},
+    {"length", -2,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetLength,    PointerClassSetLength},
+    {"bytes",  -3,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetBytes,    PointerClassSetBytes},
+    {"boolean",  -4,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetBoolean,    PointerClassSetBoolean},
+    {"double",  -5,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetDouble,    PointerClassSetDouble},
+    {"float",  -6,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetFloat,    PointerClassSetFloat},
+    {"signed",  -7,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetSigned,    PointerClassSetSigned},
+    {"allocated",  -8,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetAllocated,    PointerClassSetAllocated},
+    {"readOnly",  -9,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetReadOnly,    PointerClassSetReadOnly},
+    {"utf",  -10,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetUtf,    PointerClassSetUtf},
+    {0,0,0,0,0}
+};
+
 JSObject * JSNewPointer(JSContext * cx, void * p) {
     PointerData * pd = JS_malloc(cx, sizeof(PointerData));
     *pd = NewPointerData(p);
+    JSObject * out = JS_NewObject(cx, &pointer_class, NULL, NULL);
+    JS_SetPrivate(cx, out, pd);
+    JS_DefineProperties(cx, out, &PointerProperties);
+    return out;
+}
+
+JSObject * JSNewGarbagePointer(JSContext * cx, void * p) {
+    PointerData * pd = JS_malloc(cx, sizeof(PointerData));
+    *pd = NewPointerData(p);
+    pd->flags.allocated = true;
+    pd->flags.garbage = true;
     JSObject * out = JS_NewObject(cx, &pointer_class, NULL, NULL);
     JS_SetPrivate(cx, out, pd);
     return out;
 }
 
 void * JS_GarbagePointer(JSContext * cx, void * garbage) {
-    if (garbage) {
-        JSObject * ptr = JSNewPointer(cx, garbage);
-        PointerData * pd = JS_GetPrivate(cx, ptr);
-        pd->isAllocated = true;
-    }
+    if (garbage) JSNewGarbagePointer(cx, garbage);
     return garbage;
 }
