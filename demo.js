@@ -9,6 +9,7 @@ x[0] = 10.1;
 x[1] = 10.2;
 print(x[0], " = *((double *)", x.name, ")", '\n');
 echo(Shell.buffer.slice(x));
+echo(Shell.buffer.cut(x)[1]);
 exit(0);
 // Shell.source("/some/javascript/file.js")
 Shell.fd.read(Shell.fd[0], [], 2);
