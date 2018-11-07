@@ -25,25 +25,25 @@ else
 BUILD_STRIP_SPIDER = strip dist/bin/$(shell basename $(BUILD_SPIDER_PROGRAM))
 endif
 
-BUILD_LIBRARY != \
-	xd -ti:'\.c' -f catalog 1 -- source/javascript | \
-		xd -t subset '\.c' '.o' | \
-			xd -h subset 'source' 'build' | xd -t filter -e -- 'jskwgen\.o' 'jscpucfg\.o'
+BUILD_BIN2INC_PROGRAM = bin/bin2inc
 
-BUILD_JS_CPUCFG_H = build/javascript/jsautocfg.h
-BUILD_JS_KEYWORDS_H = build/javascript/jsautokw.h
 BUILD_JS_KEYWORDS = build/javascript/jskwgen.o
 BUILD_JS_CPUCFG = build/javascript/jscpucfg.o
 BUILD_JS_AUTO_TOOLS = $(BUILD_JS_KEYWORDS) $(BUILD_JS_CPUCFG)
+BUILD_JS_CPUCFG_H = build/javascript/jsautocfg.h
+BUILD_JS_KEYWORDS_H = build/javascript/jsautokw.h
+BUILD_JS_KEYWORDS_PROGRAM = bin/jskwgen
+BUILD_JS_CPUCFG_PROGRAM = bin/jscpucfg
+
+BUILD_LIBRARY != \
+	xd -ti:'\.c' -f catalog 1 -- source/javascript | \
+		xd -t subset '\.c' '.o' | \
+			xd -h subset 'source' 'build' | xd -t filter -e -- $(BUILD_JS_AUTO_TOOLS)
+
 BUILD_SPIDER = build/spider/spider.o
 
 # all js kit scripts are automatic targets
 BUILD_SPIDER_SCRIPTS != echo source/spider/scripts/*.js | sed -E -e 's/\.js/.c/g' -e s/source/build/g
-
-# automatic target generators
-BUILD_JS_KEYWORDS_PROGRAM = bin/jskwgen
-BUILD_JS_CPUCFG_PROGRAM = bin/jscpucfg
-BUILD_BIN2INC_PROGRAM = bin/bin2inc
 
 BUILD_AUTO_PROGRAMS = $(BUILD_BIN2INC_PROGRAM) $(BUILD_JS_CPUCFG_PROGRAM) $(BUILD_JS_KEYWORDS_PROGRAM)
 
@@ -82,7 +82,7 @@ ifneq (,$(PROJECT_DEFINES))
 PROJECT_DEFINES := $(addprefix -D,$(PROJECT_DEFINES))
 endif
 
-all: dist
+all: $(BUILD_SPIDER_PROGRAM)
 
 # everything we build depends on this Makefile
 $(ALL_BUILT_OBJECTS): Makefile
@@ -98,7 +98,7 @@ build/javascript/%.o: source/javascript/%.c
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -Ibuild/javascript $(NSPR_CFLAGS) $<
 
 build/spider/%.o: source/spider/%.c
-	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -DEDITLINE -Isource/javascript -Ibuild/javascript -Ibuild/spider/scripts $(NSPR_CFLAGS) $<
+	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -DEDITLINE -Idist/include -Ibuild/spider/scripts $(NSPR_CFLAGS) $<
 
 $(BUILD_BIN2INC_PROGRAM): source/bin2inc/bin2inc.c
 	gcc $< -o $@
@@ -117,15 +117,17 @@ $(BUILD_JS_KEYWORDS_H): bin/jskwgen
 
 $(BUILD_JS_LIBRARY_ARCHIVE): $(BUILD_LIBRARY)
 	ar rv $@ $(BUILD_LIBRARY)
+	@make lib-dist
 
-$(BUILD_SPIDER): $(BUILD_SPIDER_SCRIPTS)
-$(BUILD_SPIDER): $(shell find source/spider -maxdepth 1 -type f -name '*.c')
+$(BUILD_SPIDER): $(BUILD_SPIDER_SCRIPTS) $(BUILD_JS_LIBRARY_ARCHIVE)
+$(BUILD_SPIDER): $(shell xd -ti:'\.c' catalog 1 -- source/spider/scripts)
 
 build/spider/scripts/%.c: source/spider/scripts/%.js bin/bin2inc
 	bin2inc "`basename $<`" < $< > $@
 
-$(BUILD_SPIDER_PROGRAM): $(BUILD_SPIDER) $(BUILD_JS_LIBRARY_ARCHIVE)
+$(BUILD_SPIDER_PROGRAM): $(BUILD_SPIDER)
 	gcc -o $@ $< $(DEBUG_FLAGS) $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS) -lreadline
+	@make bin-dist
 
 clean:
 	-@rm -vf $(ALL_BUILT_OBJECTS) $(ALL_BUILT_PROGRAMS)
@@ -133,17 +135,15 @@ clean:
 	-@rm -vfd $(ALL_BUILD_DIRECTORIES)
 	-@rm -vrf dist
 
-lib-dist: $(BUILD_JS_LIBRARY_ARCHIVE)
+lib-dist:
 	@mkdir -vp dist/lib dist/include
 	@cp -vu $(BUILD_JS_LIBRARY_ARCHIVE) dist/lib
-	@cp -vu source/javascript/*.h build/javascript/*.h dist/include
+	@cp -vu source/javascript/*.{h,tbl,msg} build/javascript/*.h dist/include
 
-bin-dist: $(BUILD_SPIDER_PROGRAM)
+bin-dist:
 	@mkdir -vp dist/bin
 	@cp -vu $(BUILD_SPIDER_PROGRAM) dist/bin
 	$(BUILD_STRIP_SPIDER)
-
-dist: lib-dist bin-dist
 
 debug: clean
 	@mkdir -p build;
