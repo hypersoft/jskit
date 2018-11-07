@@ -154,8 +154,7 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     register long index = JSVAL_TO_INT(id);
     if (index >= pd->length) {
         JS_ReturnCustomException("buffer write underflow at %p; using position: %i", pd->p, index);
-    }
-    if (index >= pd->length) {
+    } else if (index >= pd->length) {
         JS_ReturnCustomException("buffer write overflow at %p; using position: %i; with a maximum of: %i", pd->p, index, pd->length - 1);
     }
 
@@ -168,7 +167,7 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     } else if (JSVAL_IS_STRING(*vp)) {
         JSString * in = JSVAL_TO_STRING(*vp);
         if (JS_GetStringLength(in) != 1) {
-            JS_ReturnException("attempting to set buffer member with muliple string characters");
+            JS_ReturnException("attempting to set buffer member with multiple string characters");
         }
         value = ((short *)in)[0];
     } else {
