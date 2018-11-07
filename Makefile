@@ -28,7 +28,7 @@ endif
 BUILD_LIBRARY != \
 	xd -ti:'\.c' -f catalog 1 -- source/javascript | \
 		xd -t subset '\.c' '.o' | \
-			xd -h subset 'source' 'build'
+			xd -h subset 'source' 'build' | xd -t filter -e -- 'jskwgen\.o' 'jscpucfg\.o'
 
 BUILD_JS_CPUCFG_H = build/javascript/jsautocfg.h
 BUILD_JS_KEYWORDS_H = build/javascript/jsautokw.h
