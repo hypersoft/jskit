@@ -152,7 +152,9 @@ static JSBool ShellSet(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 		JS_ReturnCustomException("failed to get data for environment variable: %s; from javascript", filename);
 	}
 
-	int overwrite = (argc > 2) ? JSVAL_TO_INT(argv[2]) : 1;
+	int overwrite = 1;
+
+    if (argc > 2) overwrite = ! JSVAL_TO_BOOLEAN(argv[2]);
 
 	int r = setenv(filename, contents, overwrite);
 
@@ -1033,7 +1035,7 @@ JSBool M180_ShellInit(JSContext * cx, JSObject * global) {
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readPipe", ShellSystemRead, 1, JSPROP_ENUMERATE);
 	JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "writePipe", ShellSystemWrite, 2, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "get", ShellGet, 1, JSPROP_ENUMERATE);
-    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "set", ShellSet, 2, JSPROP_ENUMERATE);
+    JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "set", ShellSet, 0, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "clear", ShellClear, 1, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "keys", ShellKeys, 0, JSPROP_ENUMERATE);
     JS_DefineFunction(cx, JSVAL_TO_OBJECT(fun), "readLine", ShellReadline, 1, JSPROP_ENUMERATE);
