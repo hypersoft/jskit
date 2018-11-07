@@ -7,6 +7,7 @@ x.double = true;
 //echo("is double:", x.double);
 x[0] = 10.1;
 print(x[0], " = *((double *)", x.name, ")", '\n');
+for (k in x) echo(k)
 exit(0);
 // Shell.source("/some/javascript/file.js")
 Shell.fd.read(Shell.fd[0], [], 2);

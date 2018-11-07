@@ -189,8 +189,9 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     PointerData * pd = JS_GetPrivate(cx, obj);
 
     if (JSVAL_IS_STRING(id))  {
-        char * nid = JS_ValueToNativeString(cx, id);
-        JS_ReturnCustomException("invalid property get request: %s", nid);
+        return JS_FALSE;
+//        char * nid = JS_ValueToNativeString(cx, id);
+//        JS_ReturnCustomException("invalid property get request: %s", nid);
     }
 
     if (pd->p == 0) { JS_ReturnException("cannot read null pointer"); }
@@ -260,11 +261,19 @@ JSBool PointerClassConvert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 
 }
 
+static JSBool
+PointerClassResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)
+{
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    if (JSVAL_TO_INT(id) < pd->length) return JS_TRUE;
+    return JS_FALSE;
+}
+
 JSClass pointer_class = {
-    "pointer", JSCLASS_HAS_PRIVATE,
+    "pointer", JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE,
     JS_PropertyStub,  JS_PropertyStub,
     PointerClassGetPoint,  PointerClassSetPoint,
-    JS_EnumerateStub, JS_ResolveStub,
+    JS_EnumerateStub, PointerClassResolve,
     PointerClassConvert,   PointerClassFinalize,
     JSCLASS_NO_OPTIONAL_MEMBERS
 };

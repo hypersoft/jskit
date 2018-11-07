@@ -1,6 +1,7 @@
 {
 	"files.associations": {
 		"*.jsh": "javascript",
-		"jsarray.h": "c"
+		"jsarray.h": "c",
+		"*.tbl": "c"
 	}
 }
