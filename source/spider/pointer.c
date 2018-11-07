@@ -162,6 +162,12 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         value = *JSVAL_TO_DOUBLE(*vp);
     } else if (JSVAL_IS_BOOLEAN(*vp)) {
         value = JSVAL_TO_BOOLEAN(*vp);
+    } else if (JSVAL_IS_STRING(*vp)) {
+        JSString * in = JSVAL_TO_STRING(*vp);
+        if (JS_GetStringLength(in) != 1) {
+            JS_ReturnException("attempting to set buffer member with muliple string characters");
+        }
+        value = ((short *)in)[0];
     } else {
         value = JSVAL_TO_INT(*vp);
     }
@@ -205,12 +211,20 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     /* for */ jsval jsv; switch (pd->size) {
         case 1: {
             if (pd->flags.vtsigned) { register signed char * x = pd->p; jsv = DOUBLE_TO_JSVAL(x[index]); }
+            else if (pd->flags.vtutf) {
+                register char * x = pd->p; short buffer[] = {*x, 0};
+                jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
+            }
             else if (pd->flags.vtboolean) { register bool * x = pd->p; jsv = BOOLEAN_TO_JSVAL(x[index]); }
             else { register unsigned char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             break;
         }
         case 2: {
             if (pd->flags.vtsigned) { register signed short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            else if (pd->flags.vtutf) {
+                register short * x = pd->p; short buffer[] = {*x, 0};
+                jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
+            }
             else { register unsigned short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
             break;
         }
