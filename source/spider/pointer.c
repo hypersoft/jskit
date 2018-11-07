@@ -20,6 +20,13 @@ PointerData NewPointerData(uintptr_t * p) {
     return out;
 }
 
+JSBool PointerClassGetName(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
+    PointerData * pd = JS_GetPrivate(cx, obj);
+    char buffer[64];
+    sprintf(buffer, "%p", pd->p);
+    JS_ReturnValue(NATIVE_STRING_TO_JSVAL(cx, buffer));
+}
+
 JSBool PointerClassSetSize(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     PointerData * pd = JS_GetPrivate(cx, obj);
     pd->size = JSVAL_TO_INT(*vp);
@@ -141,12 +148,12 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     if (pd->p == 0) {
         JS_ReturnException("cannot write null pointer");
     } else if (pd->flags.readonly) {
-        JS_ReturnException("cannot write data to read only pointer");
+        JS_ReturnCustomException("cannot write data to read only pointer %p", pd->p);
     }
 
     register long index = JSVAL_TO_INT(id);
     if (index >= pd->length) {
-        JS_ReturnCustomException("buffer write overflow with position: %i; max: %i", index, pd->length - 1);
+        JS_ReturnCustomException("buffer write overflow at %p; using position: %i; with a maximum of: %i", pd->p, index, pd->length - 1);
     }
 
     register double value = 0;
@@ -191,7 +198,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     register long index = JSVAL_TO_INT(id);
 
     if (index >= pd->length) {
-        JS_ReturnCustomException("buffer read overflow with position: %i; max: %i", index, pd->length - 1);
+        JS_ReturnCustomException("buffer read overflow at %p; using position: %i; with a maximum of: %i", pd->p, index, pd->length - 1);
     }
 
     /* for */ jsval jsv; switch (pd->size) {
@@ -276,6 +283,7 @@ static JSPropertySpec PointerProperties[] = {
     {"allocated",  -8,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetAllocated,    PointerClassSetAllocated},
     {"readOnly",  -9,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetReadOnly,    PointerClassSetReadOnly},
     {"utf",  -10,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetUtf,    PointerClassSetUtf},
+    {"name",  -11,   JSPROP_SHARED | JSPROP_PERMANENT, PointerClassGetName,    NULL},
     {0,0,0,0,0}
 };
 
