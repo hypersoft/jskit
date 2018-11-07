@@ -60,10 +60,11 @@ ALL_BUILT_OBJECTS = \
 # paths or you will get leftover directories in make clean
 ALL_BUILD_DIRECTORIES != xd -s:u parents $(ALL_BUILT_OBJECTS)
 
-ifneq (clean,$(TARGET))
+# RELAX
+#ifneq (clean,$(TARGET))
 # everything we build depends on these directories
-.not_existing_directory_error != mkdir -p $(ALL_BUILD_DIRECTORIES)
-endif
+#.not_existing_directory_error != mkdir -p $(ALL_BUILD_DIRECTORIES)
+#endif
 
 # program files
 ALL_BUILT_PROGRAMS = $(BUILD_BIN2INC_PROGRAM) \
