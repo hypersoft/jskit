@@ -95,27 +95,35 @@ build/javascript/jsscan.o: $(BUILD_JS_KEYWORDS_H)
 $(BUILD_SPIDER) $(BUILD_LIBRARY): $(BUILD_JS_CPUCFG_H)
 
 build/javascript/%.o: source/javascript/%.c
+	@mkdir -vp `dirname $@`
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -Ibuild/javascript $(NSPR_CFLAGS) $<
 
 build/spider/%.o: source/spider/%.c
+	@mkdir -vp `dirname $@`
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -DEDITLINE -Idist/include -Ibuild/spider/scripts $(NSPR_CFLAGS) $<
 
 $(BUILD_BIN2INC_PROGRAM): source/bin2inc/bin2inc.c
+	@mkdir -vp `dirname $@`
 	gcc $< -o $@
 
 bin/jscpucfg: build/javascript/jscpucfg.o
+	@mkdir -vp `dirname $@`
 	gcc -o $@ $<
 
 bin/jskwgen: build/javascript/jskwgen.o
+	@mkdir -vp `dirname $@`
 	gcc -o $@ -lm $<
 
 $(BUILD_JS_CPUCFG_H): bin/jscpucfg
+	@mkdir -vp `dirname $@`
 	jscpucfg > $@
 
 $(BUILD_JS_KEYWORDS_H): bin/jskwgen
+	@mkdir -vp `dirname $@`
 	jskwgen $@
 
 $(BUILD_JS_LIBRARY_ARCHIVE): $(BUILD_LIBRARY)
+	@mkdir -vp `dirname $@`
 	ar rv $@ $(BUILD_LIBRARY)
 	@mkdir -vp dist/lib dist/include
 	@cp -vu $(BUILD_JS_LIBRARY_ARCHIVE) dist/lib
@@ -125,9 +133,11 @@ $(BUILD_SPIDER): $(BUILD_SPIDER_SCRIPTS) $(BUILD_JS_LIBRARY_ARCHIVE)
 $(BUILD_SPIDER): $(shell xd -ti:'\.c' catalog 1 -- source/spider/scripts)
 
 build/spider/scripts/%.c: source/spider/scripts/%.js bin/bin2inc
+	@mkdir -vp `dirname $@`
 	bin2inc "`basename $<`" < $< > $@
 
 $(BUILD_SPIDER_PROGRAM): $(BUILD_SPIDER)
+	@mkdir -vp `dirname $@`
 	gcc -o $@ $< $(DEBUG_FLAGS) $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS) -lreadline
 	@mkdir -vp dist/bin
 	@cp -vu $(BUILD_SPIDER_PROGRAM) dist/bin
