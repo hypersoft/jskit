@@ -38,7 +38,7 @@ BUILD_JS_CPUCFG_PROGRAM = bin/jscpucfg
 BUILD_LIBRARY != \
 	xd -ti:'\.c' -f catalog 1 -- source/javascript | \
 		xd -t subset '\.c' '.o' | \
-			xd -h subset 'source' 'build' | xd -t filter -e -- $(BUILD_JS_AUTO_TOOLS)
+			xd -h subset 'source' 'build' | xd -h filter -e -- $(BUILD_JS_AUTO_TOOLS)
 
 BUILD_SPIDER = build/spider/spider.o
 
@@ -117,7 +117,9 @@ $(BUILD_JS_KEYWORDS_H): bin/jskwgen
 
 $(BUILD_JS_LIBRARY_ARCHIVE): $(BUILD_LIBRARY)
 	ar rv $@ $(BUILD_LIBRARY)
-	@make lib-dist
+	@mkdir -vp dist/lib dist/include
+	@cp -vu $(BUILD_JS_LIBRARY_ARCHIVE) dist/lib
+	@cp -vu source/javascript/*.{h,tbl,msg} build/javascript/*.h dist/include
 
 $(BUILD_SPIDER): $(BUILD_SPIDER_SCRIPTS) $(BUILD_JS_LIBRARY_ARCHIVE)
 $(BUILD_SPIDER): $(shell xd -ti:'\.c' catalog 1 -- source/spider/scripts)
@@ -127,23 +129,15 @@ build/spider/scripts/%.c: source/spider/scripts/%.js bin/bin2inc
 
 $(BUILD_SPIDER_PROGRAM): $(BUILD_SPIDER)
 	gcc -o $@ $< $(DEBUG_FLAGS) $(BUILD_JS_LIBRARY_ARCHIVE) $(NSPR_LIBS) -lreadline
-	@make bin-dist
+	@mkdir -vp dist/bin
+	@cp -vu $(BUILD_SPIDER_PROGRAM) dist/bin
+	$(BUILD_STRIP_SPIDER)
 
 clean:
 	-@rm -vf $(ALL_BUILT_OBJECTS) $(ALL_BUILT_PROGRAMS)
 	-@rm -vf build/spider/scripts/*.c # just in case any leftovers from a file rename; as we don't manage those files from within this file
 	-@rm -vfd $(ALL_BUILD_DIRECTORIES)
 	-@rm -vrf dist
-
-lib-dist:
-	@mkdir -vp dist/lib dist/include
-	@cp -vu $(BUILD_JS_LIBRARY_ARCHIVE) dist/lib
-	@cp -vu source/javascript/*.{h,tbl,msg} build/javascript/*.h dist/include
-
-bin-dist:
-	@mkdir -vp dist/bin
-	@cp -vu $(BUILD_SPIDER_PROGRAM) dist/bin
-	$(BUILD_STRIP_SPIDER)
 
 debug: clean
 	@mkdir -p build;
