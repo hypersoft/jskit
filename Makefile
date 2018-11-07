@@ -33,7 +33,7 @@ PROJECT_DEFINES = \
 
 ifeq (true,$(DEBUGGING))
 DEBUG_FLAGS = -g3
-#PROJECT_DEFINES += DEBUG
+PROJECT_DEFINES += DEBUG
 BUILD_STRIP_SPIDER = : debug-build not stripped
 else
 BUILD_STRIP_SPIDER = strip dist/bin/$(shell basename $(BUILD_SPIDER_PROGRAM))
