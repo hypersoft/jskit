@@ -9,7 +9,7 @@
 			"type": "cppdbg",
 			"request": "launch",
 			"program": "${workspaceFolder}/dist/bin/spider",
-			"args": [], //["-s", "demo.js", "hello", "worldians"],
+			"args": ["-s", "demo.js", "hello", "worldians"],
 			"stopAtEntry": false,
 			"cwd": "${workspaceFolder}",
 			"environment": [],

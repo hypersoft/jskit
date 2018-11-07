@@ -19,8 +19,7 @@
                 "VA_COPY=va_copy",
                 "PIC",
                 "JS_THREADSAFE",
-                "EDITLINE",
-                "JSD_LOWLEVEL_SOURCE", "JSFILE", "JSDEBUGGER_C_UI", "JSDEBUGGER", "JSD_THREADSAFE", "JSD_USE_NSPR_LOCKS"
+                "EDITLINE"
             ],
             "cStandard": "c11",
             "cppStandard": "c++17"

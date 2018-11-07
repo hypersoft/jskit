@@ -31,11 +31,6 @@
 
 #include <nspr.h>
 
-#ifdef JSDEBUGGER
-#include "jsdebug.h"
-#include "jsdb.h"
-#endif /* JSDEBUGGER */
-
 #include <stdint.h>
 #if UINTPTR_MAX == 0xffffffff
 /* 32-bit */
@@ -167,42 +162,6 @@ void displayInputs(bool display) {
 }
 
 #endif
-
-#ifdef JSD_LOWLEVEL_SOURCE
-/*
- * This facilitates sending source to JSD (the debugger system) in the shell
- * where the source is loaded using the JSFILE hack in jsscan. The function
- * below is used as a callback for the jsdbgapi JS_SetSourceHandler hook.
- * A more normal embedding (e.g. mozilla) loads source itself and can send
- * source directly to JSD without using this hook scheme.
- */
-static void
-SendSourceToJSDebugger(const char *filename, uintN lineno,
-                       jschar *str, size_t length,
-                       void **listenerTSData, JSDContext* jsdc)
-{
-    JSDSourceText *jsdsrc = (JSDSourceText *) *listenerTSData;
-
-    if (!jsdsrc) {
-        if (!filename)
-            filename = "typein";
-        if (1 == lineno) {
-            jsdsrc = JSD_NewSourceText(jsdc, filename);
-        } else {
-            jsdsrc = JSD_FindSourceForURL(jsdc, filename);
-            if (jsdsrc && JSD_SOURCE_PARTIAL !=
-                JSD_GetSourceStatus(jsdc, jsdsrc)) {
-                jsdsrc = NULL;
-            }
-        }
-    }
-    if (jsdsrc) {
-        jsdsrc = JSD_AppendUCSourceText(jsdc,jsdsrc, str, length,
-                                        JSD_SOURCE_PARTIAL);
-    }
-    *listenerTSData = jsdsrc;
-}
-#endif /* JSD_LOWLEVEL_SOURCE */
 
 #if defined(XP_WIN) || defined(XP_OS2)
 #include <io.h>     /* for isatty() */
@@ -655,53 +614,11 @@ void JS_FreeNativeStringArray(JSContext * cx, char * b[], int c) {
 
 #include "shell.c"
 
-static JSBool
-Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-    uintN i;
-    JSString *str;
-    const char *filename;
-    JSScript *script;
-    JSBool ok;
-    jsval result;
-    uint32 oldopts;
-
-    for (i = 0; i < argc; i++) {
-        str = JS_ValueToString(cx, argv[i]);
-        if (!str)
-            return JS_FALSE;
-        argv[i] = STRING_TO_JSVAL(str);
-        filename = JS_GetStringBytes(str);
-        errno = 0;
-        oldopts = JS_GetOptions(cx);
-        JS_SetOptions(cx, oldopts | JSOPTION_COMPILE_N_GO);
-        script = JS_CompileFile(cx, obj, filename);
-        if (!script) {
-            ok = JS_FALSE;
-        } else {
-            ok = !compileOnly
-                 ? JS_ExecuteScript(cx, obj, script, &result)
-                 : JS_TRUE;
-            JS_DestroyScript(cx, script);
-        }
-        JS_SetOptions(cx, oldopts);
-        if (!ok)
-            return JS_FALSE;
-    }
-
-    return JS_TRUE;
-}
-
 int main(int argc, char **argv, char **envp) {
 
     int stackDummy;
     JSObject *glob;
     int result;
-
-#ifdef JSDEBUGGER
-    JSDContext *jsdc;
-    JSBool jsdbc;
-#endif /* JSDEBUGGER */
 
     setlocale(LC_ALL, "");
 
@@ -736,36 +653,12 @@ int main(int argc, char **argv, char **envp) {
         return 1;
 #endif
 
-   // JS_DefineFunction(cx, glob, "load", Load, 0, 0);
-
-#ifdef JSDEBUGGER
-    /*
-    * XXX A command line option to enable debugging (or not) would be good
-    */
-    jsdc = JSD_DebuggerOnForUser(rt, NULL, NULL);
-    if (!jsdc)
-        return 1;
-    JSD_JSContextInUse(jsdc, cx);
-#ifdef JSD_LOWLEVEL_SOURCE
-    JS_SetSourceHandler(rt, (JSSourceHandler) SendSourceToJSDebugger, jsdc);
-#endif /* JSD_LOWLEVEL_SOURCE */
-    jsdbc = JSDB_InitDebugger(rt, jsdc, 0);
-#endif /* JSDEBUGGER */
-
     jsval rval = 0;
     JS_EvaluateScript(cx, JS_GetGlobalObject(cx), OBJECT_KEYS_PATCH_JS, OBJECT_KEYS_PATCH_JS_LENGTH, "spider://object-keys-patch.js", 1, &rval);
 
     M180_ShellInit(cx, glob);
 
     result = ProcessArgs(cx, glob, argv, argc);
-
-#ifdef JSDEBUGGER
-    if (jsdc) {
-        if (jsdbc)
-            JSDB_TermDebugger(jsdc);
-        JSD_DebuggerOff(jsdc);
-    }
-#endif  /* JSDEBUGGER */
 
 #ifdef JS_THREADSAFE
     JS_EndRequest(cx);
@@ -777,4 +670,3 @@ int main(int argc, char **argv, char **envp) {
     return result;
 
 }
-
