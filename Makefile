@@ -127,7 +127,7 @@ build/javascript/debug/%.o: source/javascript/debug/%.c
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) -DJSD_THREADSAFE -DJSD_USE_NSPR_LOCKS $(PROJECT_DEFINES) -Ibuild/javascript -Isource/javascript $(NSPR_CFLAGS) $<
 
 build/spider/debug/%.o: source/spider/debug/%.c
-	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) -DJSD_THREADSAFE -DJSD_USE_NSPR_LOCKS $(PROJECT_DEFINES) -Ibuild/javascript -Isource/javascript -Isource/javascript/debug $(NSPR_CFLAGS) $<
+	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) -DJSD_THREADSAFE -DJSD_USE_NSPR_LOCKS $(PROJECT_DEFINES) -Ibuild/spider/scripts -Ibuild/javascript -Isource/javascript -Isource/javascript/debug $(NSPR_CFLAGS) $<
 
 build/spider/%.o: source/spider/%.c
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -DEDITLINE -Isource/javascript/debug -Isource/javascript -Ibuild/javascript -Ibuild/spider/scripts -Isource/spider/debug $(NSPR_CFLAGS) $<

@@ -50,6 +50,8 @@
 
 /***************************************************************************/
 
+#include "debugger.c"
+
 JS_STATIC_DLL_CALLBACK(void)
 _ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 {
@@ -556,7 +558,7 @@ JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth)
 #endif /* JSD_LOWLEVEL_SOURCE */
 
     if (!JS_EvaluateScript(cx, dbgObj,
-                      load_deb, sizeof(load_deb)-1, "jsdb_autoload", 1,
+                      DEBUGGER_JS, DEBUGGER_JS_LENGTH, "spider://debugger.js", 1,
                       &rvalIgnore))
     {
         return _initReturn_cx("failed to execute jsdb_autoload", JS_FALSE, data);
