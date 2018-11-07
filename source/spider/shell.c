@@ -407,7 +407,7 @@ static JSBool ShellFDType(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     PRFileDesc * pfd = pd->p;
     int r = PR_GetDescType(pfd);
 
-    JS_ReturnValueWithGC(INT_TO_JSVAL(r));
+    JS_ReturnValue(INT_TO_JSVAL(r));
 
 }
 
