@@ -4,15 +4,6 @@ ifdef HYPER_MAKE
 # so if you change any file names in this file, RUN MAKE CLEAN FIRST!
 DEBUGGING != if test -e build/debug; then echo true; else echo false; fi
 
-# if you add directories here, make sure the deeper tree paths are listed before the shallow tree
-# paths or you will get leftover directories in make clean
-ALL_BUILD_DIRECTORIES = bin build/{javascript,spider/scripts,spider}
-
-ifneq (clean,$(TARGET))
-# everything we build depends on these directories
-.not_existing_directory_error != mkdir -p $(ALL_BUILD_DIRECTORIES)
-endif
-
 # if you want more defines, you can define them in file: build/defines
 PROJECT_DEFINES = \
 	XP_UNIX \
@@ -34,19 +25,10 @@ else
 BUILD_STRIP_SPIDER = strip dist/bin/$(shell basename $(BUILD_SPIDER_PROGRAM))
 endif
 
-# not all .c files in the source/javascript directory are targets so this list object list is hand made.
-BUILD_LIBRARY = \
-                 \
-	build/javascript/jsapi.o build/javascript/jsarena.o build/javascript/jsarray.o build/javascript/jsatom.o \
-	build/javascript/jsbool.o build/javascript/jscntxt.o build/javascript/jsdate.o build/javascript/jsdbgapi.o \
-	build/javascript/jsdhash.o build/javascript/jsdtoa.o build/javascript/jsemit.o build/javascript/jsexn.o \
-	build/javascript/jsfile.o build/javascript/jsfun.o build/javascript/jsgc.o build/javascript/jshash.o \
-	build/javascript/jsinterp.o build/javascript/jsinvoke.o build/javascript/jsiter.o build/javascript/jslock.o \
-	build/javascript/jslog2.o build/javascript/jslong.o build/javascript/jsmath.o build/javascript/jsnum.o \
-	build/javascript/jsobj.o build/javascript/jsopcode.o build/javascript/jsparse.o build/javascript/jsprf.o \
-	build/javascript/jsregexp.o build/javascript/jsscan.o build/javascript/jsscope.o build/javascript/jsscript.o \
-	build/javascript/jsstr.o build/javascript/jsutil.o build/javascript/jsxdrapi.o build/javascript/jsxml.o \
-	build/javascript/prmjtime.o
+BUILD_LIBRARY != \
+	xd -ti:'\.c' -f catalog 1 -- source/javascript | \
+		xd -t subset '\.c' '.o' | \
+			xd -h subset 'source' 'build'
 
 BUILD_JS_CPUCFG_H = build/javascript/jsautocfg.h
 BUILD_JS_KEYWORDS_H = build/javascript/jsautokw.h
@@ -70,12 +52,21 @@ BUILD_JS_LIBRARY_ARCHIVE = build/javascript/libspider.a
 BUILD_SPIDER_PROGRAM = build/spider/spider
 
 # object files
-ALL_BUILT_OBJECTS = $(BUILD_BIN2INC_PROGRAM) \
+ALL_BUILT_OBJECTS = \
   $(BUILD_LIBRARY) $(BUILD_JS_CPUCFG_H) $(BUILD_JS_KEYWORDS_H) \
 	$(BUILD_JS_AUTO_TOOLS) $(BUILD_SPIDER_SCRIPTS) $(BUILD_SPIDER)
 
+# if you add directories here, make sure the deeper tree paths are listed before the shallow tree
+# paths or you will get leftover directories in make clean
+ALL_BUILD_DIRECTORIES != xd -s:u parents $(ALL_BUILT_OBJECTS)
+
+ifneq (clean,$(TARGET))
+# everything we build depends on these directories
+.not_existing_directory_error != mkdir -p $(ALL_BUILD_DIRECTORIES)
+endif
+
 # program files
-ALL_BUILT_PROGRAMS = \
+ALL_BUILT_PROGRAMS = $(BUILD_BIN2INC_PROGRAM) \
 	$(BUILD_AUTO_PROGRAMS) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_SPIDER_PROGRAM) 
 
 NSPR_CFLAGS = -I/usr/include/nspr
@@ -140,6 +131,7 @@ clean:
 	-@rm -vf $(ALL_BUILT_OBJECTS) $(ALL_BUILT_PROGRAMS)
 	-@rm -vf build/spider/scripts/*.c # just in case any leftovers from a file rename; as we don't manage those files from within this file
 	-@rm -vfd $(ALL_BUILD_DIRECTORIES)
+	-@rm -vrf dist
 
 lib-dist: $(BUILD_JS_LIBRARY_ARCHIVE)
 	@mkdir -vp dist/lib dist/include
