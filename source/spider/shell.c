@@ -465,7 +465,7 @@ static JSBool ShellFDWriteBytes(JSContext *cx, JSObject *obj, uintN argc, jsval 
     PRFileDesc * pfd = pd->target;
     PointerData * buffer = JSVAL_TO_POINTER(cx, argv[1]);
     int count = JSVAL_TO_INT(argv[2]);
-    int r = PR_Write(pfd, buffer->p, count);
+    int r = PR_Write(pfd, buffer->target, count);
     JS_ReturnValue(INT_TO_JSVAL(r));
 }
 
@@ -482,7 +482,7 @@ static JSBool ShellFDReadBytes(JSContext *cx, JSObject *obj, uintN argc, jsval *
     PointerData * buffer = JSVAL_TO_POINTER(cx, argv[1]);
     int count = JSVAL_TO_INT(argv[2]);
 
-    int r = PR_Read(pfd, buffer->p, count);
+    int r = PR_Read(pfd, buffer->target, count);
 
     JS_ReturnValue(INT_TO_JSVAL(r));
 
@@ -793,7 +793,7 @@ static JSBool ShellBufferCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *a
     JSObject * ptr = JSNewPointer(cx, p);
     PointerData * pd2 = JS_GetPrivate(cx, ptr);
     memcpy(pd2, pd, sizeof(PointerData));
-    pd2->p = p;
+    pd2->target = p;
     pd2->length = length;
     pd2->bytes = bytes;
     JS_ReturnValue(OBJECT_TO_JSVAL(ptr));

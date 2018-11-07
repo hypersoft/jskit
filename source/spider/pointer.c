@@ -16,7 +16,7 @@ typedef struct PtrClassData  {
 PointerData NewPointerData(uintptr_t * p) {
     PointerData out;
     memset(&out, 0, sizeof(PointerData));
-    out.p = p;
+    out.target = p;
     return out;
 }
 
