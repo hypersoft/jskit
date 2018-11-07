@@ -3,9 +3,9 @@
 /* global function Shell(cmd), parameter */
 
 x = Shell.buffer(1, 1);
-x.boolean = true;
+//x.boolean = true;
 x[0] = 10.1;
-echo(x[0]);
+echo(x.name);
 exit(0);
 // Shell.source("/some/javascript/file.js")
 Shell.fd.read(Shell.fd[0], [], 2);

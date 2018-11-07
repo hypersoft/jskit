@@ -236,6 +236,7 @@ void PointerClassFinalize(JSContext *cx, JSObject *obj) {
     if (pd) {
         if (pd->p && pd->flags.allocated) { JS_free(cx, pd->p); }
         JS_free(cx, pd);
+        JS_SetPrivate(cx, obj, NULL);
     }
 }
 
