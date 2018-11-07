@@ -153,6 +153,9 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
 
     register long index = JSVAL_TO_INT(id);
     if (index >= pd->length) {
+        JS_ReturnCustomException("buffer write underflow at %p; using position: %i", pd->p, index);
+    }
+    if (index >= pd->length) {
         JS_ReturnCustomException("buffer write overflow at %p; using position: %i; with a maximum of: %i", pd->p, index, pd->length - 1);
     }
 
@@ -188,23 +191,25 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         }
         default: { JS_ReturnCustomException("invalid pointer type size: %i", pd->size); }
     }
-    JS_ReturnValue(JS_TRUE);
+    JS_SetCallReturnValue2(cx, DOUBLE_TO_JSVAL(value));
+    return JS_TRUE;
 }
 
 JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     PointerData * pd = JS_GetPrivate(cx, obj);
 
     if (JSVAL_IS_STRING(id))  {
-        return JS_FALSE;
-//        char * nid = JS_ValueToNativeString(cx, id);
-//        JS_ReturnCustomException("invalid property get request: %s", nid);
+        JS_SetCallReturnValue2(cx, JSVAL_VOID);
+        return JS_TRUE;
     }
 
     if (pd->p == 0) { JS_ReturnException("cannot read null pointer"); }
 
     register long index = JSVAL_TO_INT(id);
 
-    if (index >= pd->length) {
+    if (index < 0) {
+        JS_ReturnCustomException("buffer read underflow at %p; using position: %i", pd->p, index);
+    } else if (index >= pd->length) {
         JS_ReturnCustomException("buffer read overflow at %p; using position: %i; with a maximum of: %i", pd->p, index, pd->length - 1);
     }
 
