@@ -73,11 +73,13 @@ void * JS_GarbagePointer(JSContext *, void *);
 
 #define NATIVE_STRING_TO_JSVAL(CX, NSTR) STRING_TO_JSVAL(JS_NewStringCopyZ(CX, NSTR))
 
-#define JS_ReturnValue(VAL) JS_SET_RVAL((JSContext *)cx, vp, VAL); JS_MaybeGC(cx); return JS_TRUE
-#define JS_ReturnError() JS_MaybeGC(cx); return JS_FALSE
+#define JS_ReturnValue(VAL) JS_SET_RVAL((JSContext *)cx, vp, VAL); return JS_TRUE
+#define JS_ReturnValueWithGC(VAL) JS_SET_RVAL((JSContext *)cx, vp, VAL); JS_MaybeGC(cx); return JS_TRUE
+#define JS_ReturnError() return JS_FALSE
+#define JS_ReturnErrorWithGC() JS_MaybeGC(cx); return JS_FALSE
 
-#define JS_ReturnException(FORMAT) JS_ReportError((JSContext *)cx, FORMAT, NULL); JS_ReturnError()
-#define JS_ReturnCustomException(FORMAT, ...) JS_ReportError((JSContext *)cx, FORMAT, __VA_ARGS__); JS_ReturnError()
+#define JS_ReturnException(FORMAT) JS_ReportError((JSContext *)cx, FORMAT, NULL); JS_ReturnErrorWithGC()
+#define JS_ReturnCustomException(FORMAT, ...) JS_ReportError((JSContext *)cx, FORMAT, __VA_ARGS__); JS_ReturnErrorWithGC()
 
 #ifdef XP_UNIX
 #include <unistd.h>

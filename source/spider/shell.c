@@ -38,7 +38,7 @@ static JSBool ShellInclude(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
     char * string[1];
     string[0] = JS_ValueToNativeString(cx, argv[0]);
 	status = ExecScriptFile(cx, JS_GetGlobalObject(cx), string[0], vp);
-    JS_ReturnValue(status);
+    JS_ReturnValueWithGC(status);
 
 }
 
@@ -51,7 +51,7 @@ static JSBool ShellReadline(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
     string[1] = readline(string[0]);
 
     if (!string[1]) {
-        JS_ReturnError();
+        JS_ReturnErrorWithGC();
     }
 
     JS_GarbagePointer(cx, string[1]);
@@ -60,7 +60,7 @@ static JSBool ShellReadline(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
         add_history(string[1]);
     out = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, string[1]));
 
-    JS_ReturnValue(out);
+    JS_ReturnValueWithGC(out);
 
 }
 
@@ -76,13 +76,13 @@ static JSBool ShellReadPassword(JSContext *cx, JSObject *obj, uintN argc, jsval 
     displayInputs(true);
 
     if (!string[1]) {
-        JS_ReturnError();
+        JS_ReturnErrorWithGC();
     }
 
     JS_GarbagePointer(cx, string[1]);
     out = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, string[1]));
 
-    JS_ReturnValue(out);
+    JS_ReturnValueWithGC(out);
 
 }
 
@@ -97,7 +97,7 @@ static JSBool ShellClear(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
 
 	unsetenv(key);
 
-	JS_ReturnValue(JSVAL_TRUE);
+	JS_ReturnValueWithGC(JSVAL_TRUE);
 
 }
 
@@ -132,10 +132,10 @@ static JSBool ShellGet(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   JS_free(cx, key);
 
 	if (variable == NULL) {
-		JS_ReturnValue(JSVAL_NULL);
+		JS_ReturnValueWithGC(JSVAL_NULL);
 	}
 
-	JS_ReturnValue(STRING_TO_JSVAL(JS_NewStringCopyZ(cx, variable)));
+	JS_ReturnValueWithGC(STRING_TO_JSVAL(JS_NewStringCopyZ(cx, variable)));
 }
 
 static JSBool ShellSet(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
@@ -156,7 +156,7 @@ static JSBool ShellSet(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 
 	int r = setenv(filename, contents, overwrite);
 
-	JS_ReturnValue(BOOLEAN_TO_JSVAL(r == 0));
+	JS_ReturnValueWithGC(BOOLEAN_TO_JSVAL(r == 0));
 
 }
 
@@ -183,7 +183,7 @@ static JSBool ShellFileStat(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
 	JS_DefineProperty(cx, out, "writable", BOOLEAN_TO_JSVAL(PR_Access(filename, PR_ACCESS_WRITE_OK) == PR_SUCCESS), NULL, NULL, JSPROP_ENUMERATE);
 	JS_DefineProperty(cx, out, "readable", BOOLEAN_TO_JSVAL(PR_Access(filename, PR_ACCESS_READ_OK) == PR_SUCCESS), NULL, NULL, JSPROP_ENUMERATE);
 
-	JS_ReturnValue(OBJECT_TO_JSVAL(out));
+	JS_ReturnValueWithGC(OBJECT_TO_JSVAL(out));
 
 }
 
@@ -207,7 +207,7 @@ static JSBool ShellSetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 	fwrite(contents, 1, contentLength, file);
 	fclose(file);
 
-	JS_ReturnValue(DOUBLE_TO_JSVAL(contentLength));
+	JS_ReturnValueWithGC(DOUBLE_TO_JSVAL(contentLength));
 
 }
 
@@ -231,7 +231,7 @@ static JSBool ShellPrintFile(JSContext *cx, JSObject *obj, uintN argc, jsval *ar
 	fwrite(contents, 1, contentLength, file);
 	fclose(file);
 
-	JS_ReturnValue(DOUBLE_TO_JSVAL(contentLength));
+	JS_ReturnValueWithGC(DOUBLE_TO_JSVAL(contentLength));
 }
 
 static JSBool ShellGetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
@@ -270,7 +270,7 @@ static JSBool ShellGetFileContent(JSContext *cx, JSObject *obj, uintN argc, jsva
 		JS_ReturnCustomException("failed to allocate javascript string for file handle of: %s", cmd);
 	}
 
-	JS_ReturnValue(STRING_TO_JSVAL(contents));
+	JS_ReturnValueWithGC(STRING_TO_JSVAL(contents));
 
 }
 
@@ -281,7 +281,7 @@ static JSBool ShellFileExists(JSContext *cx, JSObject *obj, uintN argc, jsval *a
 		JS_ReturnException("failed to get file name from javascript");
 	}
 
-	JS_ReturnValue(BOOLEAN_TO_JSVAL(
+	JS_ReturnValueWithGC(BOOLEAN_TO_JSVAL(
         PR_Access(filename, PR_ACCESS_EXISTS) == PR_SUCCESS
     ));
 
@@ -313,7 +313,7 @@ static JSBool ShellSystemWrite(JSContext *cx, JSObject *obj, uintN argc, jsval *
 
 	fwrite(content, 1, contentLength, fp);
 
-	JS_ReturnValue(INT_TO_JSVAL(pclose(fp)));
+	JS_ReturnValueWithGC(INT_TO_JSVAL(pclose(fp)));
 
 }
 
@@ -349,7 +349,7 @@ static JSBool ShellSystemRead(JSContext *cx, JSObject *obj, uintN argc, jsval *a
 	JS_DefineProperty(cx, result, "status", INT_TO_JSVAL(status), NULL, NULL, JSPROP_ENUMERATE);
 	JS_DefineProperty(cx, result, "output", STRING_TO_JSVAL(out), NULL, NULL, JSPROP_ENUMERATE);
 
-	JS_ReturnValue(OBJECT_TO_JSVAL(result));
+	JS_ReturnValueWithGC(OBJECT_TO_JSVAL(result));
 
 }
 
@@ -367,7 +367,7 @@ static JSBool ShellSystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
 	int rc = system(cmd);
 
-	JS_ReturnValue(INT_TO_JSVAL(rc));
+	JS_ReturnValueWithGC(INT_TO_JSVAL(rc));
 }
 
 static JSBool ShellFDProperties(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *vp)
@@ -391,7 +391,7 @@ static JSBool ShellFDProperties(JSContext *cx, JSObject *obj, uintN argc, jsval 
 	JS_DefineProperty(cx, out, "modificationTime", INT_TO_JSVAL(fInfo.modifyTime), NULL, NULL, JSPROP_ENUMERATE);
 	JS_DefineProperty(cx, out, "size", INT_TO_JSVAL(fInfo.size), NULL, NULL, JSPROP_ENUMERATE);
 
-	JS_ReturnValue(OBJECT_TO_JSVAL(out));
+	JS_ReturnValueWithGC(OBJECT_TO_JSVAL(out));
 
 }
 
@@ -406,7 +406,7 @@ static JSBool ShellFDType(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     PRFileDesc * pfd = pd->p;
     int r = PR_GetDescType(pfd);
 
-    JS_ReturnValue(INT_TO_JSVAL(r));
+    JS_ReturnValueWithGC(INT_TO_JSVAL(r));
 
 }
 
@@ -592,7 +592,7 @@ static JSBool ShellFDOpenFile(JSContext *cx, JSObject *obj, uintN argc, jsval *a
     PointerData * pd = JS_GetPrivate(cx, ptr);
     pd->size = 1; pd->length = sizeof(PRFileDesc);
 
-	JS_ReturnValue(OBJECT_TO_JSVAL(ptr));
+	JS_ReturnValueWithGC(OBJECT_TO_JSVAL(ptr));
 
 }
 
@@ -862,7 +862,7 @@ static JSBool ShellBufferPaste(JSContext *cx, JSObject *obj, uintN argc, jsval *
         memcpy(JS_GetPrivate(cx, oBufferWrite) + (start * pBufferSize), source, bytes);
     }
 
-    JS_ReturnValue(argv[2]);
+    JS_ReturnValueWithGC(argv[2]);
 
 }
 */
@@ -909,7 +909,7 @@ static JSBool ShellBufferCut(JSContext *cx, JSObject *obj, uintN argc, jsval *ar
     JS_DefineProperty(cx, ptr, "length", argv[2], NULL, NULL, JSPROP_ENUMERATE);
     JS_DefineProperty(cx, ptr, "bytes", INT_TO_JSVAL(bytes), NULL, NULL, JSPROP_ENUMERATE);
     
-    JS_ReturnValue(OBJECT_TO_JSVAL(ptr));
+    JS_ReturnValueWithGC(OBJECT_TO_JSVAL(ptr));
 
 }
 */
