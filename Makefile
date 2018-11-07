@@ -6,7 +6,7 @@ DEBUGGING != if test -e build/debug; then echo true; else echo false; fi
 
 # if you add directories here, make sure the deeper tree paths are listed before the shallow tree
 # paths or you will get leftover directories in make clean
-ALL_BUILD_DIRECTORIES = bin build/{jsdb,javascript/debug,javascript,spider/scripts,spider/debug,spider}
+ALL_BUILD_DIRECTORIES = bin build/{javascript/debug,javascript,spider/scripts,spider/debug,spider}
 
 ifneq (clean,$(TARGET))
 # everything we build depends on these directories
@@ -28,11 +28,12 @@ PROJECT_DEFINES = \
 	JSDEBUGGER \
 	JSDEBUGGER_C_UI \
 	JSD_LOWLEVEL_SOURCE \
-	JSFILE
+	JSFILE \
+	NSPR_LOCK
 
 ifeq (true,$(DEBUGGING))
 DEBUG_FLAGS = -g3
-PROJECT_DEFINES += DEBUG
+#PROJECT_DEFINES += DEBUG
 BUILD_STRIP_SPIDER = : debug-build not stripped
 else
 BUILD_STRIP_SPIDER = strip dist/bin/$(shell basename $(BUILD_SPIDER_PROGRAM))
@@ -52,12 +53,22 @@ BUILD_LIBRARY = \
 	build/javascript/jsstr.o build/javascript/jsutil.o build/javascript/jsxdrapi.o build/javascript/jsxml.o \
 	build/javascript/prmjtime.o
 
+BUILD_LIBRARY_DEBUG = \
+											 \
+	build/javascript/debug/jsdebug.o build/javascript/debug/jsd_lock.o \
+	build/javascript/debug/jsd_obj.o build/javascript/debug/jsd_atom.o \
+	build/javascript/debug/jsd_high.o build/javascript/debug/jsd_hook.o \
+	build/javascript/debug/jsd_scpt.o build/javascript/debug/jsd_stak.o \
+	build/javascript/debug/jsd_step.o build/javascript/debug/jsdstubs.o \
+	build/javascript/debug/jsd_text.o build/javascript/debug/jsd_val.o
+
 BUILD_JS_CPUCFG_H = build/javascript/jsautocfg.h
 BUILD_JS_KEYWORDS_H = build/javascript/jsautokw.h
 BUILD_JS_KEYWORDS = build/javascript/jskwgen.o
 BUILD_JS_CPUCFG = build/javascript/jscpucfg.o
 BUILD_JS_AUTO_TOOLS = $(BUILD_JS_KEYWORDS) $(BUILD_JS_CPUCFG)
 BUILD_SPIDER = build/spider/spider.o
+BUILD_SPIDER_DEBUG = build/spider/debug/jsdb.o build/spider/debug/jsdrefl.o
 
 # all js kit scripts are automatic targets
 BUILD_SPIDER_SCRIPTS != echo source/spider/scripts/*.js | sed -E -e 's/\.js/.c/g' -e s/source/build/g
@@ -71,16 +82,18 @@ BUILD_AUTO_PROGRAMS = $(BUILD_BIN2INC_PROGRAM) $(BUILD_JS_CPUCFG_PROGRAM) $(BUIL
 
 # production files
 BUILD_JS_LIBRARY_ARCHIVE = build/javascript/libspider.a
+BUILD_JS_LIBRARY_DEBUG_ARCHIVE = build/javascript/libspider-debug.a
 BUILD_SPIDER_PROGRAM = build/spider/spider
 
 # object files
 ALL_BUILT_OBJECTS = $(BUILD_BIN2INC_PROGRAM) \
-  $(BUILD_LIBRARY) $(BUILD_JS_CPUCFG_H) $(BUILD_JS_KEYWORDS_H) \
-	$(BUILD_JS_AUTO_TOOLS) $(BUILD_SPIDER_SCRIPTS) $(BUILD_SPIDER)
+  $(BUILD_LIBRARY) $(BUILD_LIBRARY_DEBUG) $(BUILD_JS_CPUCFG_H) $(BUILD_JS_KEYWORDS_H) \
+	$(BUILD_JS_AUTO_TOOLS) $(BUILD_SPIDER_SCRIPTS) $(BUILD_SPIDER) $(BUILD_SPIDER_DEBUG)
 
 # program files
 ALL_BUILT_PROGRAMS = \
-	$(BUILD_AUTO_PROGRAMS) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_SPIDER_PROGRAM) 
+	$(BUILD_AUTO_PROGRAMS) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_JS_LIBRARY_DEBUG_ARCHIVE) \
+	$(BUILD_SPIDER_PROGRAM) 
 
 NSPR_CFLAGS = -I/usr/include/nspr
 NSPR_LIBS = -lm -L/usr/lib -lplds4 -lplc4 -lnspr4
@@ -95,9 +108,7 @@ ifneq (,$(PROJECT_DEFINES))
 PROJECT_DEFINES := $(addprefix -D,$(PROJECT_DEFINES))
 endif
 
-BUILD_SPIDER_PROGRAM_DEBUG = build/spider/debug/jsdb.o build/spider/debug/jsdrefl.o
-
-all: dist
+all: $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_JS_LIBRARY_DEBUG_ARCHIVE) $(BUILD_SPIDER_PROGRAM)
 
 # everything we build depends on this Makefile
 $(ALL_BUILT_OBJECTS): Makefile
@@ -107,7 +118,7 @@ build/javascript/jsscan.o: $(BUILD_JS_KEYWORDS_H)
 
 # declare that all build objects depend on autocpucfg, because source/javascript/jsapi.h requires it.
 # doing this other ways could create problems, such as during make -j ...
-$(BUILD_SPIDER) $(BUILD_SPIDER_DEBUG_EXTENSION) $(BUILD_LIBRARY): $(BUILD_JS_CPUCFG_H)
+$(BUILD_SPIDER) $(BUILD_SPIDER_DEBUG) $(BUILD_LIBRARY_DEBUG) $(BUILD_LIBRARY): $(BUILD_JS_CPUCFG_H)
 
 build/javascript/%.o: source/javascript/%.c
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -Ibuild/javascript $(NSPR_CFLAGS) $<
@@ -117,11 +128,6 @@ build/javascript/debug/%.o: source/javascript/debug/%.c
 
 build/spider/debug/%.o: source/spider/debug/%.c
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) -DJSD_THREADSAFE -DJSD_USE_NSPR_LOCKS $(PROJECT_DEFINES) -Ibuild/javascript -Isource/javascript -Isource/javascript/debug $(NSPR_CFLAGS) $<
-
-BUILD_SPIDER_DEBUG_EXTENSION = build/javascript/debug/libspider-debug.a
-
-$(BUILD_SPIDER_DEBUG_EXTENSION): build/javascript/debug/jsdebug.o build/javascript/debug/jsd_lock.o build/javascript/debug/jsd_obj.o build/javascript/debug/jsd_atom.o build/javascript/debug/jsd_high.o build/javascript/debug/jsd_hook.o build/javascript/debug/jsd_scpt.o build/javascript/debug/jsd_stak.o build/javascript/debug/jsd_step.o build/javascript/debug/jsdstubs.o build/javascript/debug/jsd_text.o build/javascript/debug/jsd_val.o
-	ar rv $@ build/javascript/debug/jsdebug.o build/javascript/debug/jsd_lock.o build/javascript/debug/jsd_obj.o build/javascript/debug/jsd_atom.o build/javascript/debug/jsd_high.o build/javascript/debug/jsd_hook.o build/javascript/debug/jsd_scpt.o build/javascript/debug/jsd_stak.o build/javascript/debug/jsd_step.o build/javascript/debug/jsdstubs.o build/javascript/debug/jsd_text.o build/javascript/debug/jsd_val.o
 
 build/spider/%.o: source/spider/%.c
 	gcc -o $@ -c -Wall -Wno-format $(DEBUG_FLAGS) $(PROJECT_DEFINES) -DEDITLINE -Isource/javascript/debug -Isource/javascript -Ibuild/javascript -Ibuild/spider/scripts -Isource/spider/debug $(NSPR_CFLAGS) $<
@@ -144,29 +150,32 @@ $(BUILD_JS_KEYWORDS_H): bin/jskwgen
 $(BUILD_JS_LIBRARY_ARCHIVE): $(BUILD_LIBRARY)
 	ar rv $@ $(BUILD_LIBRARY)
 
-$(BUILD_SPIDER): $(BUILD_SPIDER_PROGRAM_DEBUG)
+$(BUILD_JS_LIBRARY_DEBUG_ARCHIVE): $(BUILD_LIBRARY_DEBUG)
+	ar rv $@ $(BUILD_LIBRARY_DEBUG)
+
+$(BUILD_SPIDER): $(BUILD_SPIDER_DEBUG)
 $(BUILD_SPIDER): $(BUILD_SPIDER_SCRIPTS)
 $(BUILD_SPIDER): $(shell find source/spider -maxdepth 1 -type f -name '*.c')
 
 build/spider/scripts/%.c: source/spider/scripts/%.js bin/bin2inc
 	bin2inc "`basename $<`" < $< > $@
 
-$(BUILD_SPIDER_PROGRAM): $(BUILD_SPIDER) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_SPIDER_DEBUG_EXTENSION)
-	gcc -o $@ $< $(BUILD_SPIDER_PROGRAM_DEBUG) $(DEBUG_FLAGS) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_SPIDER_DEBUG_EXTENSION) $(NSPR_LIBS) -lreadline
+$(BUILD_SPIDER_PROGRAM): $(BUILD_SPIDER) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_JS_LIBRARY_DEBUG_ARCHIVE)
+	gcc -o $@ $< $(BUILD_SPIDER_DEBUG) $(DEBUG_FLAGS) $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_JS_LIBRARY_DEBUG_ARCHIVE) $(NSPR_LIBS) -lreadline
 
 clean:
 	-@rm -vf $(ALL_BUILT_OBJECTS) $(ALL_BUILT_PROGRAMS)
 	-@rm -vf build/spider/scripts/*.c # just in case any leftovers from a file rename; as we don't manage those files from within this file
 	-@rm -vfd $(ALL_BUILD_DIRECTORIES)
 
-lib-dist: $(BUILD_JS_LIBRARY_ARCHIVE)
+lib-dist: $(BUILD_JS_LIBRARY_ARCHIVE) $(BUILD_JS_LIBRARY_DEBUG_ARCHIVE)
 	@mkdir -vp dist/lib dist/include
-	@cp -vu $(BUILD_JS_LIBRARY_ARCHIVE) dist/lib
-	@cp -vu source/javascript/*.h build/javascript/*.h dist/include
+	@cp -vu $^ dist/lib
+	@cp -vu source/javascript/*.h build/javascript/*.h source/javascript/debug/*.h dist/include
 
 bin-dist: $(BUILD_SPIDER_PROGRAM)
 	@mkdir -vp dist/bin
-	@cp -vu $(BUILD_SPIDER_PROGRAM) dist/bin
+	@cp -vu $^ dist/bin
 	$(BUILD_STRIP_SPIDER)
 
 dist: lib-dist bin-dist

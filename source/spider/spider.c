@@ -736,7 +736,7 @@ int main(int argc, char **argv, char **envp) {
         return 1;
 #endif
 
-    JS_DefineFunction(cx, glob, "load", Load, 0, 0);
+   // JS_DefineFunction(cx, glob, "load", Load, 0, 0);
 
 #ifdef JSDEBUGGER
     /*

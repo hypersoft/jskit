@@ -764,7 +764,7 @@ function print()
 }
 
 var evalLoopLineno = 1;
-var evalLoopPrompt = "jsdb"+jsd.DebuggerDepth+">";
+var evalLoopPrompt = "spider-debug"+jsd.DebuggerDepth+">";
 var evalLoopFilename = "jsdb_evalLoop"+jsd.DebuggerDepth;
 
 function doEvalLoop()
@@ -1034,4 +1034,4 @@ function f() {return load('f.js');}
 /***************************************************************************/
 /* Signal Success */
 
-print("successfully loaded debugger.js for depth "+jsd.DebuggerDepth);
+if (noisy) print("successfully loaded debugger.js for depth "+jsd.DebuggerDepth);

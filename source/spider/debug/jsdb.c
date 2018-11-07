@@ -496,7 +496,11 @@ JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth)
 
     if(!(data->rtDebugger = JS_NewRuntime(8L * 1024L * 1024L)))
         return _initReturn("debugger runtime creation error", JS_FALSE);
+
+#ifdef DEBUG
     printf("NewRuntime: %p\n", data->rtDebugger);
+#endif
+
     if(!(data->cxDebugger = cx = JS_NewContext(data->rtDebugger, 8192))) {
         JS_DestroyRuntime(data->rtDebugger);
         free(data);
