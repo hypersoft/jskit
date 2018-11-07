@@ -231,6 +231,10 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         case 4: {
             if (pd->flags.vtfloat) { register float32 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             else if (pd->flags.vtsigned) { register int32_t * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            else if (pd->flags.vtutf) {
+                register uint32_t * x = pd->p; short buffer[] = {*x, 0};
+                jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
+            }
             else { register uint32_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             break;
         }
@@ -238,6 +242,10 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
             if (pd->flags.vtfloat) { register float64 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             else if (pd->flags.vtdouble) { register double * x = pd->p; JS_NewNumberValue(cx, x[index], &jsv); }
             else if (pd->flags.vtsigned) { register int64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else if (pd->flags.vtutf) {
+                register uint64_t * x = pd->p; short buffer[] = {*x, 0};
+                jsv = STRING_TO_JSVAL(JS_NewUCString(cx, buffer, 1));
+            }
             else { register uint64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             break;
         }
