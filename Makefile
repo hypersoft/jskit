@@ -128,6 +128,7 @@ $(BUILD_JS_LIBRARY_ARCHIVE): $(BUILD_LIBRARY)
 	ar rv $@ $(BUILD_LIBRARY)
 
 $(BUILD_SPIDER): $(BUILD_SPIDER_SCRIPTS)
+$(BUILD_SPIDER): $(shell find source/spider -maxdepth 1 -type f -name '*.c')
 
 build/spider/scripts/%.c: source/spider/scripts/%.js bin/bin2inc
 	bin2inc "`basename $<`" < $< > $@
