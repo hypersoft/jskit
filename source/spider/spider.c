@@ -368,7 +368,7 @@ Process(JSContext *cx, JSObject *obj, char *filename, JSBool forceTTY)
          */
         startline = lineno;
         do {
-            if (!GetLine(cx, bufp, file, startline == lineno ? "spider: " : "")) {
+            if (!GetLine(cx, bufp, file, startline == lineno ? "javascript: " : "")) {
                 hitEOF = JS_TRUE;
                 break;
             }
@@ -383,13 +383,13 @@ Process(JSContext *cx, JSObject *obj, char *filename, JSBool forceTTY)
         if (script) {
             if (!compileOnly) {
                 ok = JS_ExecuteScript(cx, obj, script, &result);
-                if (ok && result != JSVAL_VOID) {
-                    str = JS_ValueToString(cx, result);
-                    if (str)
-                        fprintf(gOutFile, "%s\n", JS_GetStringBytes(str));
-                    else
-                        ok = JS_FALSE;
-                }
+                // if (ok && result != JSVAL_VOID) {
+                //     str = JS_ValueToString(cx, result);
+                //     if (str)
+                //         fprintf(gOutFile, "%s\n", JS_GetStringBytes(str));
+                //     else
+                //         ok = JS_FALSE;
+                // }
             }
             JS_DestroyScript(cx, script);
         }
