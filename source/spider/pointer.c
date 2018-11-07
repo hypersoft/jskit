@@ -235,7 +235,6 @@ void PointerClassFinalize(JSContext *cx, JSObject *obj) {
 JSBool PointerClassConvert(JSContext *cx, JSObject *obj, JSType type, jsval *vp) {
 
     PointerData * pd = JS_GetPrivate(cx, obj);
-    char b[64];
 
     if (!pd) {
         JS_ReturnException("couldn't get pointer header");
