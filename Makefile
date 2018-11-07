@@ -130,7 +130,7 @@ $(BUILD_JS_LIBRARY_ARCHIVE): $(BUILD_LIBRARY)
 	@cp -vu source/javascript/*.{h,tbl,msg} build/javascript/*.h dist/include
 
 $(BUILD_SPIDER): $(BUILD_SPIDER_SCRIPTS) $(BUILD_JS_LIBRARY_ARCHIVE)
-$(BUILD_SPIDER): $(shell xd -ti:'\.c' catalog 1 -- source/spider/scripts)
+$(BUILD_SPIDER): $(shell xd -ti:'\.c' -f catalog 1 -- source/spider | xd -t filter -e -- '/spider.c')
 
 build/spider/scripts/%.c: source/spider/scripts/%.js bin/bin2inc
 	@mkdir -vp `dirname $@`

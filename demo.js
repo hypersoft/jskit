@@ -14,11 +14,17 @@ var bytesWritten = Shell.writeFile('js.out', parameter.join(", ") + '\n');
 var chars = Shell.buffer(1, bytesWritten);
 chars.utf = true;
 var fileptr = Shell.fd.openFile('js.out', 'r');
-Shell.fd.read(fileptr, chars, chars.length);
+Shell.fd.read(fileptr, chars);
 Shell.fd.close(fileptr);
+fileptr = Shell.fd.openFile('js.out', 'r');
+var chars2 = new Array(bytesWritten);
+Shell.fd.read(fileptr, chars2)
+chars.utf = false;
+echo(chars2[0] === chars[0])
 Shell.fd.write(Shell.fd[1], chars, chars.length);
 echo();
 echo(Shell.buffer.slice(chars));
+echo(chars2)
 
 //echo(Shell.buffer.slice(chars));
 
