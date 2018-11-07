@@ -1,5 +1,5 @@
 typedef struct PtrClassData  {
-    void *p;
+    void *target;
     int size, length, bytes;
     struct {
         int garbage : 1;
@@ -23,7 +23,7 @@ PointerData NewPointerData(uintptr_t * p) {
 JSBool PointerClassGetName(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     PointerData * pd = JS_GetPrivate(cx, obj);
     char buffer[64];
-    sprintf(buffer, "%p", pd->p);
+    sprintf(buffer, "%p", pd->target);
     JS_ReturnValue(NATIVE_STRING_TO_JSVAL(cx, buffer));
 }
 
@@ -145,17 +145,17 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         JS_ReturnCustomException("invalid property set request: %s", nid);
     }
 
-    if (pd->p == 0) {
+    if (pd->target == 0) {
         JS_ReturnException("cannot write null pointer");
     } else if (pd->flags.readonly) {
-        JS_ReturnCustomException("cannot write data to read only pointer %p", pd->p);
+        JS_ReturnCustomException("cannot write data to read only pointer %p", pd->target);
     }
 
     register long index = JSVAL_TO_INT(id);
     if (index >= pd->length) {
-        JS_ReturnCustomException("buffer write underflow at %p; using position: %i", pd->p, index);
+        JS_ReturnCustomException("buffer write underflow at %p; using position: %i", pd->target, index);
     } else if (index >= pd->length) {
-        JS_ReturnCustomException("buffer write overflow at %p; using position: %i; with a maximum of: %i", pd->p, index, pd->length - 1);
+        JS_ReturnCustomException("buffer write overflow at %p; using position: %i; with a maximum of: %i", pd->target, index, pd->length - 1);
     }
 
     register double value = 0;
@@ -175,17 +175,17 @@ JSBool PointerClassSetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
     }
 
     switch (pd->size) {
-        case 1: { register char * x = pd->p; x[index] = value; break; }
-        case 2: { register short * x = pd->p; x[index] = value; break; }
+        case 1: { register char * x = pd->target; x[index] = value; break; }
+        case 2: { register short * x = pd->target; x[index] = value; break; }
         case 4: {
-            if (pd->flags.vtfloat) { register float32 * x = pd->p; x[index] = value; }
-            else { register int32_t * x = pd->p; x[index] = value; }
+            if (pd->flags.vtfloat) { register float32 * x = pd->target; x[index] = value; }
+            else { register int32_t * x = pd->target; x[index] = value; }
             break;
         }
         case 8: {
-            if (pd->flags.vtfloat) { register float64 * x = pd->p; x[index] = value; }
-            else if (pd->flags.vtdouble) { register double * x = pd->p; x[index] = value; }
-            else { register int64_t * x = pd->p; x[index] = value; }
+            if (pd->flags.vtfloat) { register float64 * x = pd->target; x[index] = value; }
+            else if (pd->flags.vtdouble) { register double * x = pd->target; x[index] = value; }
+            else { register int64_t * x = pd->target; x[index] = value; }
             break;
         }
         default: { JS_ReturnCustomException("invalid pointer type size: %i", pd->size); }
@@ -206,55 +206,55 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
         return JS_TRUE;
     }
 
-    if (pd->p == 0) { JS_ReturnException("cannot read null pointer"); }
+    if (pd->target == 0) { JS_ReturnException("cannot read null pointer"); }
 
     register long index = JSVAL_TO_INT(id);
 
     if (index < 0) {
-        JS_ReturnCustomException("buffer read underflow at %p; using position: %i", pd->p, index);
+        JS_ReturnCustomException("buffer read underflow at %p; using position: %i", pd->target, index);
     } else if (index >= pd->length) {
-        JS_ReturnCustomException("buffer read overflow at %p; using position: %i; with a maximum of: %i", pd->p, index, pd->length - 1);
+        JS_ReturnCustomException("buffer read overflow at %p; using position: %i; with a maximum of: %i", pd->target, index, pd->length - 1);
     }
 
     /* for */ jsval jsv; switch (pd->size) {
         case 1: {
-            if (pd->flags.vtsigned) { register signed char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
-            else if (pd->flags.vtboolean) { register bool * x = pd->p; jsv = BOOLEAN_TO_JSVAL(x[index]); }
+            if (pd->flags.vtsigned) { register signed char * x = pd->target; jsv = INT_TO_JSVAL(x[index]); }
+            else if (pd->flags.vtboolean) { register bool * x = pd->target; jsv = BOOLEAN_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
-                register char * x = pd->p; short unsigned int buffer[] = {*x, 0};
+                register char * x = pd->target; short unsigned int buffer[] = {*x, 0};
                 jsv = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, 1));
             }
-            else { register unsigned char * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            else { register unsigned char * x = pd->target; jsv = INT_TO_JSVAL(x[index]); }
             break;
         }
         case 2: {
-            if (pd->flags.vtsigned) { register signed short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            if (pd->flags.vtsigned) { register signed short * x = pd->target; jsv = INT_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
-                register short * x = pd->p; short unsigned int buffer[] = {*x, 0};
+                register short * x = pd->target; short unsigned int buffer[] = {*x, 0};
                 jsv = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, 1));
             }
-            else { register unsigned short * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            else { register unsigned short * x = pd->target; jsv = INT_TO_JSVAL(x[index]); }
             break;
         }
         case 4: {
-            if (pd->flags.vtfloat) { register float32 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
-            else if (pd->flags.vtsigned) { register int32_t * x = pd->p; jsv = INT_TO_JSVAL(x[index]); }
+            if (pd->flags.vtfloat) { register float32 * x = pd->target; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else if (pd->flags.vtsigned) { register int32_t * x = pd->target; jsv = INT_TO_JSVAL(x[index]); }
             else if (pd->flags.vtutf) {
-                register uint32_t * x = pd->p; short unsigned int buffer[] = {*x, 0};
+                register uint32_t * x = pd->target; short unsigned int buffer[] = {*x, 0};
                 jsv = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, 1));
             }
-            else { register uint32_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else { register uint32_t * x = pd->target; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             break;
         }
         case 8: {
-            if (pd->flags.vtfloat) { register float64 * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
-            else if (pd->flags.vtdouble) { register double * x = pd->p; JS_NewNumberValue(cx, x[index], &jsv); }
-            else if (pd->flags.vtsigned) { register int64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            if (pd->flags.vtfloat) { register float64 * x = pd->target; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else if (pd->flags.vtdouble) { register double * x = pd->target; JS_NewNumberValue(cx, x[index], &jsv); }
+            else if (pd->flags.vtsigned) { register int64_t * x = pd->target; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             else if (pd->flags.vtutf) {
-                register uint64_t * x = pd->p; short unsigned int buffer[] = {*x, 0};
+                register uint64_t * x = pd->target; short unsigned int buffer[] = {*x, 0};
                 jsv = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, 1));
             }
-            else { register uint64_t * x = pd->p; JS_NewNumberValue(cx, (double) x[index], &jsv); }
+            else { register uint64_t * x = pd->target; JS_NewNumberValue(cx, (double) x[index], &jsv); }
             break;
         }
         default: { JS_ReturnCustomException("invalid pointer type size: %i", pd->size); }
@@ -265,7 +265,7 @@ JSBool PointerClassGetPoint(JSContext *cx, JSObject *obj, jsval id, jsval *vp) {
 void PointerClassFinalize(JSContext *cx, JSObject *obj) {
     PointerData * pd = JS_GetPrivate(cx, obj);
     if (pd) {
-        if (pd->p && pd->flags.allocated) { JS_free(cx, pd->p); }
+        if (pd->target && pd->flags.allocated) { JS_free(cx, pd->target); }
         JS_free(cx, pd);
         JS_SetPrivate(cx, obj, NULL);
     }
@@ -278,12 +278,12 @@ JSBool PointerClassConvert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
     switch (type) {
         case JSTYPE_NUMBER: {
             jsval n = 0;
-            JS_NewNumberValue(cx, (double) (uintptr_t) pd->p, &n);
+            JS_NewNumberValue(cx, (double) (uintptr_t) pd->target, &n);
             JS_ReturnValue(n);
             break;
         }
         case JSTYPE_BOOLEAN: {
-            JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->p != NULL));
+            JS_ReturnValue(BOOLEAN_TO_JSVAL(pd->target != NULL));
             break;
         }
         default: JS_ReturnValue(JS_FALSE);

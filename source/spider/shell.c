@@ -374,7 +374,7 @@ static JSBool ShellFDProperties(JSContext *cx, JSObject *obj, uintN argc, jsval 
 {
 
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
-    PRFileDesc * filename = pd->p;
+    PRFileDesc * filename = pd->target;
 
 	if (!filename) {
 		JS_ReturnException("can't convert file name to string");
@@ -404,7 +404,7 @@ static JSBool ShellFDType(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     }
 
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
-    PRFileDesc * pfd = pd->p;
+    PRFileDesc * pfd = pd->target;
     int r = PR_GetDescType(pfd);
 
     JS_ReturnValue(INT_TO_JSVAL(r));
@@ -437,7 +437,7 @@ static JSBool ShellFDSeek(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     }
 
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
-    PRFileDesc * pfd = pd->p;
+    PRFileDesc * pfd = pd->target;
     int r, count = JSVAL_TO_INT(argv[1]);
 
     if (argc == 2) {
@@ -462,7 +462,7 @@ static JSBool ShellFDWriteBytes(JSContext *cx, JSObject *obj, uintN argc, jsval 
 		JS_ReturnException("this procedure requires three parameters: FILEDESC, ARRAY, COUNT");
     }
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
-    PRFileDesc * pfd = pd->p;
+    PRFileDesc * pfd = pd->target;
     PointerData * buffer = JSVAL_TO_POINTER(cx, argv[1]);
     int count = JSVAL_TO_INT(argv[2]);
     int r = PR_Write(pfd, buffer->p, count);
@@ -477,7 +477,7 @@ static JSBool ShellFDReadBytes(JSContext *cx, JSObject *obj, uintN argc, jsval *
     }
 
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
-    PRFileDesc * pfd = pd->p;
+    PRFileDesc * pfd = pd->target;
 
     PointerData * buffer = JSVAL_TO_POINTER(cx, argv[1]);
     int count = JSVAL_TO_INT(argv[2]);
@@ -496,7 +496,7 @@ static JSBool ShellFDBytes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
     }
 
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
-    PRFileDesc * pfd = pd->p;
+    PRFileDesc * pfd = pd->target;
 
       int r = PR_Available(pfd);
 
@@ -512,7 +512,7 @@ static JSBool ShellFDSync(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     }
 
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
-    PRFileDesc * pfd = pd->p;
+    PRFileDesc * pfd = pd->target;
     int r = PR_Sync(pfd);
 
     JS_ReturnValue(BOOLEAN_TO_JSVAL(r == PR_SUCCESS));
@@ -527,7 +527,7 @@ static JSBool ShellFDClose(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
     }
 
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
-    PRFileDesc * pfd = pd->p;
+    PRFileDesc * pfd = pd->target;
     int r = PR_Close(pfd);
 
     JS_ReturnValue(BOOLEAN_TO_JSVAL(r == PR_SUCCESS));
@@ -743,18 +743,18 @@ static JSBool ShellBufferResize(JSContext *cx, JSObject *obj, uintN argc, jsval 
 
     PointerData * pd = JSVAL_TO_POINTER(cx, argv[0]);
 
-    void * buffer = pd->p;
+    void * buffer = pd->target;
     long size = JSVAL_TO_INT(argv[1]);
     long count = JSVAL_TO_INT(argv[2]);
     long bytes = size * count;
     buffer = JS_realloc(cx, buffer, bytes);
 
     if (!buffer) {
-        JS_free(cx, pd->p); pd->p = NULL;
+        JS_free(cx, pd->target); pd->target = NULL;
         JS_ReturnCustomException("failed to change buffer span to %i", bytes);
     }
 
-    pd->p = buffer;
+    pd->target = buffer;
     pd->size = size;
     pd->length = count;
     pd->bytes = bytes;
@@ -789,7 +789,7 @@ static JSBool ShellBufferCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *a
 
     int bytes = pd->size * length;
     void * p = (bytes)?JS_malloc(cx, bytes):NULL;
-    if (bytes) memcpy(p, pd->p + (begin * pd->size), bytes);
+    if (bytes) memcpy(p, pd->target + (begin * pd->size), bytes);
     JSObject * ptr = JSNewPointer(cx, p);
     PointerData * pd2 = JS_GetPrivate(cx, ptr);
     memcpy(pd2, pd, sizeof(PointerData));
@@ -831,26 +831,26 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
     if (length) switch (pd->size) {
         case 1: {
             if (pd->flags.vtsigned) {
-                register signed char * x = pd->p;
+                register signed char * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     jsv = INT_TO_JSVAL(x[index]);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }
             else if (pd->flags.vtboolean) {
-                register bool * x = pd->p;
+                register bool * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     jsv = BOOLEAN_TO_JSVAL(x[index]);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }
             else if (pd->flags.vtutf) {
-                register char * x = pd->p; short unsigned int buffer[end];
+                register char * x = pd->target; short unsigned int buffer[end];
                 for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
                 JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, end)));
             }
             else { 
-                register unsigned char * x = pd->p;
+                register unsigned char * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     jsv = INT_TO_JSVAL(x[index]);
                     JS_SetElement(cx, out, destIndex, &jsv);
@@ -860,19 +860,19 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
         }
         case 2: {
             if (pd->flags.vtsigned) { 
-                register signed short * x = pd->p;
+                register signed short * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     jsv = INT_TO_JSVAL(x[index]);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }
             else if (pd->flags.vtutf) {
-                register short * x = pd->p; short unsigned int buffer[end];
+                register short * x = pd->target; short unsigned int buffer[end];
                 for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
                 JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, end)));
             }
             else { 
-                register unsigned short * x = pd->p;
+                register unsigned short * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     jsv = INT_TO_JSVAL(x[index]);
                     JS_SetElement(cx, out, destIndex, &jsv);
@@ -882,26 +882,26 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
         }
         case 4: {
             if (pd->flags.vtfloat) { 
-                register float32 * x = pd->p;
+                register float32 * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     JS_NewNumberValue(cx, (double) x[index], &jsv);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }
             else if (pd->flags.vtsigned) {
-                register int32_t * x = pd->p;
+                register int32_t * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     jsv = INT_TO_JSVAL(x[index]);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }
             else if (pd->flags.vtutf) {
-                register uint32_t * x = pd->p; short unsigned int buffer[end];
+                register uint32_t * x = pd->target; short unsigned int buffer[end];
                 for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
                 JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, end)));
             }
             else { 
-                register uint32_t * x = pd->p;
+                register uint32_t * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     JS_NewNumberValue(cx, (double) x[index], &jsv);
                     JS_SetElement(cx, out, destIndex, &jsv);
@@ -911,32 +911,32 @@ static JSBool ShellBufferSlice(JSContext *cx, JSObject *obj, uintN argc, jsval *
         }
         case 8: {
             if (pd->flags.vtfloat) { 
-                register float64 * x = pd->p;
+                register float64 * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     JS_NewNumberValue(cx, (double) x[index], &jsv);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }
             else if (pd->flags.vtdouble) {
-                register double * x = pd->p;
+                register double * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     JS_NewNumberValue(cx, x[index], &jsv);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }
             else if (pd->flags.vtsigned) {
-                register int64_t * x = pd->p;
+                register int64_t * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     JS_NewNumberValue(cx, (double) x[index], &jsv);
                     JS_SetElement(cx, out, destIndex, &jsv);
                 }
             }
             else if (pd->flags.vtutf) {
-                register uint64_t * x = pd->p; short unsigned int buffer[end];
+                register uint64_t * x = pd->target; short unsigned int buffer[end];
                 for (destIndex = 0; destIndex < end; destIndex++, index++) buffer[destIndex] = x[index];
                 JS_ReturnValue(STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, buffer, end)));
             }
-            else { register uint64_t * x = pd->p;
+            else { register uint64_t * x = pd->target;
                 for (destIndex = 0; destIndex < end; destIndex++, index++) {
                     JS_NewNumberValue(cx, (double) x[index], &jsv);
                     JS_SetElement(cx, out, destIndex, &jsv);
@@ -964,13 +964,13 @@ static JSBool ShellBufferFree(JSContext *cx, JSObject *obj, uintN argc, jsval *a
         PointerData * pd = JSVAL_TO_POINTER(cx, argv[i++]);
         if (pd == NULL) {
             JS_ReturnException("failed to get pointer header");
-        } else if (pd->p == NULL) {
+        } else if (pd->target == NULL) {
             JS_ReturnException("failed to free null pointer");
         } else if (pd->flags.allocated == false) {
             char * pStr = JS_ValueToNativeString(cx, OBJECT_TO_JSVAL(obj));
             JS_ReturnCustomException("failed fo free foreign pointer: %s", pStr);
         }
-        JS_free(cx, pd->p);
+        JS_free(cx, pd->target);
         // erase it
         memset(pd, 0, sizeof(PointerData));
     }
@@ -994,12 +994,12 @@ static JSBool ShellBufferClear(JSContext *cx, JSObject *obj, uintN argc, jsval *
         if (!pd) {
             JS_ReturnException("failed to get pointer header");
         } else
-        if (!pd->p) {
+        if (!pd->target) {
             JS_ReturnException("cannot write to null pointer");
         } else if (pd->flags.readonly) {
             JS_ReturnException("cannot write to read only pointer");
         }
-        memset(pd->p, 0, pd->bytes);
+        memset(pd->target, 0, pd->bytes);
     }
 
     JS_ReturnValue(JS_TRUE);
