@@ -416,7 +416,7 @@ static JSBool ShellFDPipe(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 {
     JSObject * arrayObj = JS_NewArrayObject(cx, 2, NULL);
     PRFileDesc * in[2];
-    int r = PR_CreatePipe(&in[0], &in[1]);
+    PR_CreatePipe(&in[0], &in[1]);
     jsval jsv1, jsv2;
     jsv1 = POINTER_TO_JSVAL(cx, in[0]);
     jsv2 = POINTER_TO_JSVAL(cx, in[1]);

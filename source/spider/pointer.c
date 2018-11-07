@@ -291,15 +291,6 @@ JSBool PointerClassConvert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 
 }
 
-static JSBool
-PointerClassResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags, JSObject **objp)
-{
-    PointerData * pd = JS_GetPrivate(cx, obj);
-    if (JSVAL_TO_INT(id) < pd->length) return JS_TRUE;
-    return JS_FALSE;
-}
-
-
 JSClass pointer_class = {
     "pointer", JSCLASS_HAS_PRIVATE,
     JS_PropertyStub,  JS_PropertyStub,

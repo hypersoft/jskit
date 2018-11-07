@@ -32,6 +32,17 @@ DAMAGE.
 #include <string.h>
 #include <ctype.h>
 
+void strupr(char s[]) {
+   int c = 0;
+   
+   while (s[c] != '\0') {
+      if (s[c] >= 'a' && s[c] <= 'z') {
+         s[c] = s[c] - 32;
+      }
+      c++;
+   }
+}
+
 /* Just turns byte streams into hex encoded char arrays over stdio is all */
 size_t encode(char * name) {
 	strupr(name);
@@ -63,16 +74,6 @@ size_t encode(char * name) {
 
 }
 
-void strupr(char s[]) {
-   int c = 0;
-   
-   while (s[c] != '\0') {
-      if (s[c] >= 'a' && s[c] <= 'z') {
-         s[c] = s[c] - 32;
-      }
-      c++;
-   }
-}
 
 int main(int argc, char ** argv) {
 	return encode((argc > 1)?argv[1]:"stdin"), 0;

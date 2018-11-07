@@ -20,7 +20,7 @@ Shell.fd.write(Shell.fd[1], chars, chars.length);
 echo();
 echo(Shell.buffer.slice(chars));
 
-//echo(Shell.buffer.slice(chars));
+//echo(Shell.buffer.copy(chars)); // creates a native duplicate; works like slice
 
 // Shell.joinFile(FILE, CONTENTS) // for append mode
 
@@ -46,7 +46,7 @@ Shell.writePipe('cat', Shell.readPipe('ls').output);
 
 //echo("you typed: ", Shell.readLine("type something > "));
 
-echo("All properties of Function: Shell:", Object.keys(Shell).join(", "));
+echo("All enumerable properties of Function: Shell:", Object.keys(Shell).join(", "));
 echo("exiting...");
 
 exit();
