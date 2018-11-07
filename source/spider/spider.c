@@ -71,6 +71,8 @@ void JS_FreeNativeStrings(JSContext * cx, ...) {
 void * JS_GarbagePointer(JSContext *, void *);
 #define JS_ValueToNativeString(CX, JSVAL) ((char *) JS_GarbagePointer(CX, JS_EncodeString(CX, JS_ValueToString(CX, JSVAL))))
 
+#define NATIVE_STRING_TO_JSVAL(CX, NSTR) STRING_TO_JSVAL(JS_NewStringCopyZ(CX, NSTR))
+
 #define JS_ReturnValue(VAL) JS_SET_RVAL((JSContext *)cx, vp, VAL); JS_MaybeGC(cx); return JS_TRUE
 #define JS_ReturnError() JS_MaybeGC(cx); return JS_FALSE
 
