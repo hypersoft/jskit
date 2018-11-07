@@ -243,10 +243,6 @@ JSBool PointerClassConvert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 
     PointerData * pd = JS_GetPrivate(cx, obj);
 
-    if (!pd) {
-        JS_ReturnException("couldn't get pointer header");
-    }
-
     switch (type) {
         case JSTYPE_NUMBER: {
             jsval n = 0;
